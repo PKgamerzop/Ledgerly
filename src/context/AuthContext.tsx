@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 
@@ -33,6 +34,14 @@ const DEMO_USER_KEY = 'ledgerly_demo_user';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const mapFirebaseUser = (currentUser: User): AppUser => ({
+  uid: currentUser.uid,
+  email: currentUser.email,
+  displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+  photoURL: currentUser.photoURL,
+  isDemo: false,
+});
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -57,16 +66,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    // Handle redirect result from Google Sign-In (fires after redirect back to app)
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          localStorage.removeItem(DEMO_USER_KEY);
+          setUser(mapFirebaseUser(result.user));
+        }
+      })
+      .catch((err) => {
+        // Log but don't block — redirect errors are non-fatal on page load
+        console.warn('Google redirect result error:', err);
+      });
+
     // Monitor Firebase Auth state (persistent across browser reloads)
     const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
       if (currentUser) {
-        setUser({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          photoURL: currentUser.photoURL,
-          isDemo: false,
-        });
+        setUser(mapFirebaseUser(currentUser));
         localStorage.removeItem(DEMO_USER_KEY);
       } else if (initialDemoUser) {
         setUser(initialDemoUser);
@@ -86,39 +102,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     localStorage.removeItem(DEMO_USER_KEY);
     const result = await signInWithEmailAndPassword(auth, email.trim(), pass);
-    setUser({
-      uid: result.user.uid,
-      email: result.user.email,
-      displayName: result.user.displayName || result.user.email?.split('@')[0] || 'User',
-      photoURL: result.user.photoURL,
-      isDemo: false,
-    });
+    setUser(mapFirebaseUser(result.user));
   };
 
   const signup = async (email: string, pass: string) => {
     localStorage.removeItem(DEMO_USER_KEY);
     const result = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-    setUser({
-      uid: result.user.uid,
-      email: result.user.email,
-      displayName: result.user.displayName || result.user.email?.split('@')[0] || 'User',
-      photoURL: result.user.photoURL,
-      isDemo: false,
-    });
+    setUser(mapFirebaseUser(result.user));
   };
 
   const loginWithGoogle = async () => {
     localStorage.removeItem(DEMO_USER_KEY);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    const result = await signInWithPopup(auth, provider);
-    setUser({
-      uid: result.user.uid,
-      email: result.user.email,
-      displayName: result.user.displayName || result.user.email?.split('@')[0] || 'User',
-      photoURL: result.user.photoURL,
-      isDemo: false,
-    });
+    // Use redirect instead of popup — more reliable on Vercel and all modern browsers
+    await signInWithRedirect(auth, provider);
+    // Note: page will redirect away; getRedirectResult() on mount handles the result
   };
 
   const quickDemoLogin = async () => {
