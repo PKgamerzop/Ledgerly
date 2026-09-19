@@ -14,14 +14,13 @@ export const auth = getAuth(app);
 
 export const SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/drive.appdata',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
 ];
 
 const provider = new GoogleAuthProvider();
 SCOPES.forEach((scope) => provider.addScope(scope));
-provider.setCustomParameters({ prompt: 'select_account' });
+provider.setCustomParameters({ prompt: 'consent', access_type: 'offline' });
 
 let cachedAccessToken: string | null = null;
 let cachedGoogleUser: { uid: string; email: string; displayName: string; photoURL?: string } | null = null;
@@ -58,7 +57,7 @@ async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken
       const client = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES.join(' '),
-        prompt: 'select_account',
+        prompt: 'consent',
         callback: async (response: any) => {
           if (response.error) {
             if (response.error === 'popup_closed_by_user' || response.error === 'access_denied') {

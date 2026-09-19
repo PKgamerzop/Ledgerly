@@ -206,18 +206,22 @@ async function parseDriveApiError(res: Response, defaultMsg: string): Promise<Er
       errMsg.toLowerCase().includes('accessnotconfigured')
     ) {
       return new Error(
-        'Google Drive API is disabled in your Google Cloud project. Enable it at: https://console.cloud.google.com/apis/library/drive.googleapis.com?project=gen-lang-client-0847831288'
+        'Google Drive API was just enabled or is propagating. Please wait 1-2 minutes and tap sync again.'
       );
     }
 
-    if (errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('scope')) {
+    if (
+      errMsg.toLowerCase().includes('insufficient') ||
+      errMsg.toLowerCase().includes('scope') ||
+      errMsg.toLowerCase().includes('permission')
+    ) {
       return new Error(
-        'Google Drive permission missing. Please sign in again and check the Google Drive access permission box.'
+        'Google Drive permission missing. Please tap "Link Drive" to sign in again and ensure the Google Drive checkbox is checked on the consent screen.'
       );
     }
 
     return new Error(
-      `Google Drive access denied (403): ${errMsg || 'Please enable Google Drive API in Google Cloud Console.'}`
+      `Google Drive access denied (403): ${errMsg || 'Check that API restrictions allow Google Drive API.'}`
     );
   }
 
@@ -230,7 +234,7 @@ async function parseDriveApiError(res: Response, defaultMsg: string): Promise<Er
 async function findVaultFile(token: string): Promise<{ id: string; modifiedTime: string } | null> {
   const query = encodeURIComponent(`name = '${VAULT_FILE_NAME}' and trashed = false`);
   const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=drive,appDataFolder&q=${query}&fields=files(id,name,modifiedTime)`,
+    `https://www.googleapis.com/drive/v3/files?spaces=drive&q=${query}&fields=files(id,name,modifiedTime)`,
     {
       headers: { Authorization: `Bearer ${token}` },
     }
