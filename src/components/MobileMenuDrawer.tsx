@@ -198,9 +198,22 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                 </div>
 
                 {syncError && (
-                  <div className="flex items-center gap-1 text-[11px] text-rose-700 bg-rose-50 p-2 rounded-lg">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{syncError}</span>
+                  <div className="text-[11px] text-rose-800 bg-rose-50 border border-rose-200 p-2.5 rounded-xl space-y-1">
+                    <div className="flex items-start gap-1.5 font-bold">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                      <span>Drive Sync Notice</span>
+                    </div>
+                    <p className="text-[11px] text-rose-700 leading-snug break-words">{syncError}</p>
+                    {syncError.includes('drive.googleapis.com') && (
+                      <a
+                        href="https://console.cloud.google.com/apis/library/drive.googleapis.com?project=gen-lang-client-0847831288"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block mt-1 font-bold text-teal-800 underline hover:text-teal-900 text-xs"
+                      >
+                        👉 Click here to Enable Google Drive API (1-click)
+                      </a>
+                    )}
                   </div>
                 )}
 

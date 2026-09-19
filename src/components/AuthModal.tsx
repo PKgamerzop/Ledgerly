@@ -68,6 +68,10 @@ export const AuthModal: React.FC = () => {
         setError(null);
       } else if (errObj.code === 'auth/popup-blocked') {
         setError('The sign-in popup was blocked by your browser. Please allow popups or open the app in a new tab.');
+      } else if (errObj.code === 'auth/unauthorized-domain' || errObj.message?.includes('unauthorized-domain')) {
+        setError(
+          `Domain authorization required by Firebase for (${window.location.hostname}). You can sign in immediately using Email & Password or Explore in Demo Mode below!`
+        );
       } else {
         setError(errObj.message || 'Could not complete Google sign-in.');
       }

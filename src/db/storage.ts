@@ -1,4 +1,5 @@
 import { SpendingTransaction, Person, LedgerEntry, LedgerEntryType } from '../types';
+import { markLocalEdit } from '../services/googleDriveSync';
 
 // Event emitter helper for local reactive updates across views & tabs
 const DEMO_TX_KEY = 'ledgerly_demo_transactions';
@@ -8,6 +9,7 @@ const DATA_CHANGE_EVENT = 'ledgerly_data_change';
 const DEMO_CHANGE_EVENT = 'ledgerly_demo_data_change';
 
 function notifyDataChange() {
+  markLocalEdit();
   window.dispatchEvent(new CustomEvent(DATA_CHANGE_EVENT));
   window.dispatchEvent(new CustomEvent(DEMO_CHANGE_EVENT));
 }

@@ -133,27 +133,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={handleSyncClick}
                 disabled={isSyncing}
-                title="Sync with Google Drive"
-                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 hover:bg-teal-100 transition cursor-pointer"
+                title={syncStatus === 'error' ? 'Sync notice - click to see details' : 'Sync with Google Drive'}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border transition cursor-pointer ${
+                  syncStatus === 'error'
+                    ? 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'
+                    : 'bg-teal-50 border-teal-200/80 text-teal-800 hover:bg-teal-100'
+                }`}
               >
                 <RefreshCw
-                  className={`w-3.5 h-3.5 text-teal-600 ${
-                    isSyncing || syncStatus === 'syncing' ? 'animate-spin' : ''
-                  }`}
+                  className={`w-3.5 h-3.5 ${
+                    syncStatus === 'error' ? 'text-rose-600' : 'text-teal-600'
+                  } ${isSyncing || syncStatus === 'syncing' ? 'animate-spin' : ''}`}
                 />
                 <span className="hidden sm:inline">
-                  {isSyncing || syncStatus === 'syncing' ? 'Syncing...' : 'Drive Synced'}
+                  {isSyncing || syncStatus === 'syncing'
+                    ? 'Syncing...'
+                    : syncStatus === 'error'
+                    ? 'Sync Notice'
+                    : 'Drive Synced'}
                 </span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 hover:bg-teal-50 border border-slate-200 hover:border-teal-200 text-slate-600 hover:text-teal-800 transition cursor-pointer"
+                className="flex items-center gap-1 text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-full bg-slate-100 hover:bg-teal-50 border border-slate-200 hover:border-teal-200 text-slate-600 hover:text-teal-800 transition cursor-pointer"
                 title="Connect Google Drive to sync with PC"
               >
                 <Cloud className="w-3.5 h-3.5 text-slate-500" />
-                <span>Link Drive</span>
+                <span className="text-[11px] sm:text-xs">Link Drive</span>
               </button>
             )}
 
