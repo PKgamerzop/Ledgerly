@@ -64,7 +64,10 @@ export const AuthModal: React.FC = () => {
     } catch (err: unknown) {
       const errObj = err as { code?: string; message?: string };
       if (errObj.code === 'auth/popup-closed-by-user') {
-        setError('Google sign-in popup was closed.');
+        // User voluntarily dismissed popup
+        setError(null);
+      } else if (errObj.code === 'auth/popup-blocked') {
+        setError('The sign-in popup was blocked by your browser. Please allow popups or open the app in a new tab.');
       } else {
         setError(errObj.message || 'Could not complete Google sign-in.');
       }
@@ -167,6 +170,9 @@ export const AuthModal: React.FC = () => {
             </svg>
             <span>{googleLoading ? 'Signing in with Google...' : 'Continue with Google'}</span>
           </button>
+          <p className="text-[11px] text-center text-teal-700 font-medium px-1">
+            ✨ Enables seamless sync between Mobile & PC via your free Google Drive
+          </p>
 
           {/* Divider */}
           <div className="relative my-4 text-center">

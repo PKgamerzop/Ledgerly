@@ -143,9 +143,27 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Amount Input */}
           <div>
-            <label htmlFor="spending-amount-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Amount Spent ({currency}) *
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="spending-amount-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Amount Spent ({currency}) *
+              </label>
+              {/* Quick amount adders for mobile */}
+              <div className="flex items-center gap-1">
+                {[10, 50, 100, 500].map((inc) => (
+                  <button
+                    key={inc}
+                    type="button"
+                    onClick={() => {
+                      const cur = parseFloat(amount) || 0;
+                      setAmount((cur + inc).toFixed(cur % 1 === 0 ? 0 : 2));
+                    }}
+                    className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition"
+                  >
+                    +{inc}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="relative">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg pointer-events-none select-none">
                 {currency}
@@ -183,11 +201,40 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
             </div>
           </div>
 
-          {/* Date Picker Input */}
+          {/* Date Picker with Quick Date Pills for Mobile */}
           <div>
-            <label htmlFor="spending-date-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Date *
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="spending-date-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Date *
+              </label>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDate(getTodayDateString())}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition ${
+                    date === getTodayDateString()
+                      ? 'bg-teal-700 text-white'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const y = new Date(Date.now() - 86400000);
+                    setDate(y.toISOString().split('T')[0]);
+                  }}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition ${
+                    date === new Date(Date.now() - 86400000).toISOString().split('T')[0]
+                      ? 'bg-teal-700 text-white'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  Yesterday
+                </button>
+              </div>
+            </div>
             <div className="relative">
               <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
               <input

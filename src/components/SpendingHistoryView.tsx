@@ -330,14 +330,15 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <span className="text-base font-black text-slate-900">
                           {formatCurrency(item.amount, currency)}
                         </span>
                         <button
                           onClick={() => setEditingTransaction(item)}
-                          className="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition opacity-80 group-hover:opacity-100 cursor-pointer"
+                          className="p-2 text-slate-500 hover:text-teal-700 hover:bg-teal-50 bg-slate-100/80 rounded-xl transition cursor-pointer"
                           title="Edit or Delete transaction"
+                          aria-label="Edit or delete transaction"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>

@@ -1,4 +1,16 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import {
+  signInWithGoogleOAuth,
+  getGoogleAccessToken,
+  setGoogleAccessToken,
+  signOutGoogle,
+  initGoogleAuth,
+} from '../services/googleAuth';
+import {
+  syncVaultWithGoogleDrive,
+  subscribeSyncState,
+  SyncStatus,
+} from '../services/googleDriveSync';
 
 export interface AppUser {
   uid: string;
@@ -20,10 +32,15 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   isOffline: boolean;
+  googleToken: string | null;
+  syncStatus: SyncStatus;
+  lastSyncTimestamp: number | null;
+  syncError: string | null;
   login: (email: string, pass: string) => Promise<void>;
   signup: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   quickDemoLogin: () => Promise<void>;
+  syncNow: (forceDirection?: 'push' | 'pull') => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -56,11 +73,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [googleToken, setGoogleTokenState] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('unlinked');
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState<number | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
+  const debounceTimerRef = useRef<any>(null);
+
+  // Subscribe to drive sync state changes
   useEffect(() => {
-    // Monitor online/offline network status
+    const unsub = subscribeSyncState((state) => {
+      setSyncStatus(state.status);
+      setLastSyncTimestamp(state.lastSyncTimestamp);
+      setSyncError(state.error);
+    });
+    return unsub;
+  }, []);
+
+  // Online / Offline monitor
+  useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
@@ -95,6 +128,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Listen for Google Auth state
+  useEffect(() => {
+    const unsubGoogle = initGoogleAuth(
+      (googleUser, token) => {
+        if (token) {
+          setGoogleTokenState(token);
+          setSyncStatus('idle');
+        }
+      },
+      () => {
+        setGoogleTokenState(null);
+        setSyncStatus('unlinked');
+      }
+    );
+    return unsubGoogle;
+  }, []);
+
+  // Synchronize with Google Drive on demand
+  const syncNow = useCallback(
+    async (forceDirection?: 'push' | 'pull') => {
+      const token = googleToken || getGoogleAccessToken();
+      if (!token || !user) {
+        return;
+      }
+      try {
+        await syncVaultWithGoogleDrive(token, user.uid, forceDirection);
+      } catch (err) {
+        console.error('Manual sync failed:', err);
+      }
+    },
+    [googleToken, user]
+  );
+
+  // Auto-sync debounce on data changes when logged in with Google
+  useEffect(() => {
+    const handleDataChanged = () => {
+      const token = googleToken || getGoogleAccessToken();
+      if (!token || !user || user.isDemo) return;
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        syncVaultWithGoogleDrive(token, user.uid).catch((err) => {
+          console.warn('Background Drive auto-sync error:', err);
+        });
+      }, 1500);
+    };
+
+    window.addEventListener('ledgerly_data_change', handleDataChanged);
+    return () => {
+      window.removeEventListener('ledgerly_data_change', handleDataChanged);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [googleToken, user]);
+
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail || !pass) {
@@ -113,7 +205,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Incorrect password. Please verify and try again.');
       }
     } else {
-      // Auto-register seamless login for new users
       const newUid = generateUserUid(cleanEmail);
       storedUsers[cleanEmail] = {
         uid: newUid,
@@ -135,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(appUser));
     localStorage.removeItem(DEMO_USER_KEY);
     setUser(appUser);
+    setSyncStatus('unlinked');
   };
 
   const signup = async (email: string, pass: string) => {
@@ -176,19 +268,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(appUser));
     localStorage.removeItem(DEMO_USER_KEY);
     setUser(appUser);
+    setSyncStatus('unlinked');
   };
 
   const loginWithGoogle = async () => {
-    localStorage.removeItem(DEMO_USER_KEY);
-    const googleUser: AppUser = {
-      uid: 'usr_google_account',
-      email: 'user.google@gmail.com',
-      displayName: 'Google Account User',
-      photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces',
-      isDemo: false,
-    };
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(googleUser));
-    setUser(googleUser);
+    try {
+      localStorage.removeItem(DEMO_USER_KEY);
+      const { user: gUser, accessToken } = await signInWithGoogleOAuth();
+
+      const appUser: AppUser = {
+        uid: gUser.uid,
+        email: gUser.email,
+        displayName: gUser.displayName || gUser.email?.split('@')[0] || 'Google User',
+        photoURL: gUser.photoURL,
+        isDemo: false,
+      };
+
+      setGoogleAccessToken(accessToken);
+      setGoogleTokenState(accessToken);
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(appUser));
+      setUser(appUser);
+
+      // Perform initial bidirectional sync with Google Drive
+      try {
+        await syncVaultWithGoogleDrive(accessToken, gUser.uid);
+      } catch (syncErr) {
+        console.warn('Initial Drive sync notice:', syncErr);
+      }
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        // User voluntarily closed popup - do not log error
+        throw err;
+      }
+      console.warn('Google Sign-In notice:', err?.message || err);
+      throw err;
+    }
   };
 
   const quickDemoLogin = async () => {
@@ -200,13 +314,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
     localStorage.removeItem(AUTH_SESSION_KEY);
+    setGoogleTokenState(null);
     setUser(demoUser);
+    setSyncStatus('unlinked');
   };
 
   const logout = async () => {
+    try {
+      await signOutGoogle();
+    } catch (e) {
+      // ignore
+    }
+    setGoogleAccessToken(null);
+    setGoogleTokenState(null);
     localStorage.removeItem(AUTH_SESSION_KEY);
     localStorage.removeItem(DEMO_USER_KEY);
     setUser(null);
+    setSyncStatus('unlinked');
   };
 
   return (
@@ -215,10 +339,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         loading,
         isOffline,
+        googleToken,
+        syncStatus,
+        lastSyncTimestamp,
+        syncError,
         login,
         signup,
         loginWithGoogle,
         quickDemoLogin,
+        syncNow,
         logout,
       }}
     >
