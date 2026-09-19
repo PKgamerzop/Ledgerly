@@ -87,10 +87,10 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
             <Mail className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <span className="font-bold text-teal-900 block">
-                Automated Cloud Function Scheduled:
+                Instant Download & Automated Delivery:
               </span>
               <p className="text-teal-800 leading-relaxed">
-                The Firebase Cloud Function is configured to execute automatically on the last day of each month, querying your spending, generating an Excel file with Date, Reason, Amount, and Total Monthly Spend, and delivering it to <strong className="text-teal-950">{user?.email || 'your registered email'}</strong>.
+                You can download your full monthly Excel statement anytime below with one click. For automated cloud delivery, a scheduled serverless function can be configured to run on the last day of each month and send reports directly to <strong className="text-teal-950">{user?.email || 'your registered email'}</strong>.
               </p>
               <button
                 type="button"
@@ -98,7 +98,7 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
                 className="text-teal-800 hover:text-teal-950 font-bold underline inline-flex items-center gap-1 cursor-pointer pt-1"
               >
                 <Code2 className="w-3.5 h-3.5" />
-                {showCodeDetails ? 'Hide Cloud Function Code' : 'View Cloud Function Code & Deployment'}
+                {showCodeDetails ? 'Hide Function Code' : 'View Scheduled Delivery Script'}
               </button>
             </div>
           </div>
