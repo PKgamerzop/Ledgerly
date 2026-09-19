@@ -1,0 +1,6 @@
+{
+  "name": "Ledgerly",
+  "description": "Progressive Web Application (PWA) to track personal spending, debts, and generate monthly reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
