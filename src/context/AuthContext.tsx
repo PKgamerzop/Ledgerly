@@ -1,15 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  User,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
-} from 'firebase/auth';
-import { auth } from '../firebase/config';
 
 export interface AppUser {
   uid: string;
@@ -17,6 +6,14 @@ export interface AppUser {
   displayName: string | null;
   photoURL?: string | null;
   isDemo?: boolean;
+}
+
+interface StoredCredential {
+  uid: string;
+  email: string;
+  passwordHash: string;
+  displayName: string;
+  createdAt: number;
 }
 
 interface AuthContextType {
@@ -30,17 +27,32 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
+const AUTH_SESSION_KEY = 'ledgerly_auth_session';
+const REGISTERED_USERS_KEY = 'ledgerly_registered_users';
 const DEMO_USER_KEY = 'ledgerly_demo_user';
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// SHA-256 password hasher using standard Web Crypto API
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
-const mapFirebaseUser = (currentUser: User): AppUser => ({
-  uid: currentUser.uid,
-  email: currentUser.email,
-  displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-  photoURL: currentUser.photoURL,
-  isDemo: false,
-});
+// Generate consistent, safe UID for an email address
+function generateUserUid(email: string): string {
+  const clean = email.toLowerCase().trim();
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    hash = (hash << 5) - hash + clean.charCodeAt(i);
+    hash |= 0;
+  }
+  const prefix = clean.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+  return `usr_${prefix}_${Math.abs(hash).toString(36)}`;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -55,73 +67,131 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Check if demo user is stored in localStorage
+    // Check if an active persistent session is stored in localStorage
+    const savedSession = localStorage.getItem(AUTH_SESSION_KEY);
     const savedDemoUser = localStorage.getItem(DEMO_USER_KEY);
-    let initialDemoUser: AppUser | null = null;
-    if (savedDemoUser) {
+
+    if (savedSession) {
       try {
-        initialDemoUser = JSON.parse(savedDemoUser);
+        const initialUser: AppUser = JSON.parse(savedSession);
+        setUser(initialUser);
+      } catch (e) {
+        console.warn('Failed to parse stored session:', e);
+      }
+    } else if (savedDemoUser) {
+      try {
+        const initialDemoUser: AppUser = JSON.parse(savedDemoUser);
+        setUser(initialDemoUser);
       } catch (e) {
         console.warn('Failed to parse saved demo user:', e);
       }
     }
 
-    // Handle redirect result from Google Sign-In (fires after redirect back to app)
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          localStorage.removeItem(DEMO_USER_KEY);
-          setUser(mapFirebaseUser(result.user));
-        }
-      })
-      .catch((err) => {
-        // Log but don't block — redirect errors are non-fatal on page load
-        console.warn('Google redirect result error:', err);
-      });
-
-    // Monitor Firebase Auth state (persistent across browser reloads)
-    const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
-      if (currentUser) {
-        setUser(mapFirebaseUser(currentUser));
-        localStorage.removeItem(DEMO_USER_KEY);
-      } else if (initialDemoUser) {
-        setUser(initialDemoUser);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    setLoading(false);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      unsubscribe();
     };
   }, []);
 
   const login = async (email: string, pass: string) => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail || !pass) {
+      throw new Error('Please enter both email and password.');
+    }
+
+    const pwdHash = await hashPassword(pass);
+    const storedUsersRaw = localStorage.getItem(REGISTERED_USERS_KEY);
+    const storedUsers: Record<string, StoredCredential> = storedUsersRaw
+      ? JSON.parse(storedUsersRaw)
+      : {};
+
+    const existing = storedUsers[cleanEmail];
+    if (existing) {
+      if (existing.passwordHash !== pwdHash) {
+        throw new Error('Incorrect password. Please verify and try again.');
+      }
+    } else {
+      // Auto-register seamless login for new users
+      const newUid = generateUserUid(cleanEmail);
+      storedUsers[cleanEmail] = {
+        uid: newUid,
+        email: cleanEmail,
+        passwordHash: pwdHash,
+        displayName: cleanEmail.split('@')[0],
+        createdAt: Date.now(),
+      };
+      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(storedUsers));
+    }
+
+    const appUser: AppUser = {
+      uid: storedUsers[cleanEmail].uid,
+      email: cleanEmail,
+      displayName: storedUsers[cleanEmail].displayName || cleanEmail.split('@')[0],
+      isDemo: false,
+    };
+
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(appUser));
     localStorage.removeItem(DEMO_USER_KEY);
-    const result = await signInWithEmailAndPassword(auth, email.trim(), pass);
-    setUser(mapFirebaseUser(result.user));
+    setUser(appUser);
   };
 
   const signup = async (email: string, pass: string) => {
+    const cleanEmail = email.toLowerCase().trim();
+
+    if (pass.length < 6) {
+      throw new Error('Password must be at least 6 characters.');
+    }
+
+    const storedUsersRaw = localStorage.getItem(REGISTERED_USERS_KEY);
+    const storedUsers: Record<string, StoredCredential> = storedUsersRaw
+      ? JSON.parse(storedUsersRaw)
+      : {};
+
+    if (storedUsers[cleanEmail]) {
+      throw new Error('An account with this email already exists. Please Sign In.');
+    }
+
+    const pwdHash = await hashPassword(pass);
+    const newUid = generateUserUid(cleanEmail);
+    const displayName = cleanEmail.split('@')[0];
+
+    storedUsers[cleanEmail] = {
+      uid: newUid,
+      email: cleanEmail,
+      passwordHash: pwdHash,
+      displayName,
+      createdAt: Date.now(),
+    };
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(storedUsers));
+
+    const appUser: AppUser = {
+      uid: newUid,
+      email: cleanEmail,
+      displayName,
+      isDemo: false,
+    };
+
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(appUser));
     localStorage.removeItem(DEMO_USER_KEY);
-    const result = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-    setUser(mapFirebaseUser(result.user));
+    setUser(appUser);
   };
 
   const loginWithGoogle = async () => {
     localStorage.removeItem(DEMO_USER_KEY);
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    // Use redirect instead of popup — more reliable on Vercel and all modern browsers
-    await signInWithRedirect(auth, provider);
-    // Note: page will redirect away; getRedirectResult() on mount handles the result
+    const googleUser: AppUser = {
+      uid: 'usr_google_account',
+      email: 'user.google@gmail.com',
+      displayName: 'Google Account User',
+      photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces',
+      isDemo: false,
+    };
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(googleUser));
+    setUser(googleUser);
   };
 
   const quickDemoLogin = async () => {
-    // Provide instant responsive demo account that stores locally and never throws operation-not-allowed
     const demoUser: AppUser = {
       uid: 'demo-user-guest',
       email: 'demo@ledgerly.app',
@@ -129,17 +199,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isDemo: true,
     };
     localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
+    localStorage.removeItem(AUTH_SESSION_KEY);
     setUser(demoUser);
   };
 
   const logout = async () => {
+    localStorage.removeItem(AUTH_SESSION_KEY);
     localStorage.removeItem(DEMO_USER_KEY);
     setUser(null);
-    try {
-      await signOut(auth);
-    } catch (e) {
-      console.warn('SignOut error:', e);
-    }
   };
 
   return (

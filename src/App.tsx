@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { NavigationTab, SpendingTransaction, Person } from './types';
-import { subscribeTransactions, subscribePeople } from './firebase/db';
+import { subscribeTransactions, subscribePeople } from './db/storage';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
 import { InstallPwaBanner } from './components/InstallPwaBanner';

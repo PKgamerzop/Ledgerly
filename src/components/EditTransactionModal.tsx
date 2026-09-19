@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { updateTransaction, deleteTransaction } from '../firebase/db';
+import { updateTransaction, deleteTransaction } from '../db/storage';
 import { SpendingTransaction } from '../types';
 import { X, Trash2, CheckCircle2, AlertCircle, Calendar, Tag } from 'lucide-react';
 

@@ -8,11 +8,11 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(import.meta.dirname, '.'),
+        '@': path.resolve(process.cwd(), '.'),
       },
     },
     build: {
-      // Suppress chunk size warning — bundle is large due to xlsx/firebase libs
+      // Suppress chunk size warning — bundle includes xlsx report generator
       chunkSizeWarningLimit: 1500,
     },
     server: {

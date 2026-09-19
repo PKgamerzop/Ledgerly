@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { addPerson, cleanUpSettledPeople } from '../firebase/db';
+import { addPerson, cleanUpSettledPeople } from '../db/storage';
 import { Person, DebtType } from '../types';
 import { formatCurrency, getTodayDateString } from '../utils/formatters';
 import { PersonLedgerModal } from './PersonLedgerModal';

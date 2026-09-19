@@ -6,7 +6,7 @@ import {
   addLedgerEntry,
   deleteLedgerEntry,
   deletePerson,
-} from '../firebase/db';
+} from '../db/storage';
 import { Person, LedgerEntry, LedgerEntryType } from '../types';
 import { formatCurrency, formatDateDisplay, getTodayDateString } from '../utils/formatters';
 import {

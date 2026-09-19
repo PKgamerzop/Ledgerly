@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { addTransaction } from '../firebase/db';
+import { addTransaction } from '../db/storage';
 import { SpendingTransaction } from '../types';
 import { getTodayDateString, formatCurrency, formatDateDisplay } from '../utils/formatters';
 import {

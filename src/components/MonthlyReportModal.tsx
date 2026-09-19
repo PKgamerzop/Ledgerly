@@ -107,26 +107,18 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
           {showCodeDetails && (
             <div className="bg-slate-900 text-slate-100 rounded-2xl p-4 text-[11px] font-mono overflow-x-auto space-y-2 border border-slate-800">
               <div className="text-slate-400 font-sans font-semibold text-xs pb-1 border-b border-slate-800 flex items-center justify-between">
-                <span>functions/index.js (Firebase Cloud Function)</span>
+                <span>scripts/monthlyReport.js (Scheduled Cron Script)</span>
                 <span className="text-teal-400">Scheduled: Last day of month</span>
               </div>
               <pre className="text-teal-300 leading-relaxed">
-{`const { onSchedule } = require("firebase-functions/v2/scheduler");
-const admin = require("firebase-admin");
+{`// Automated Monthly Statement Generator
 const XLSX = require("xlsx");
 const nodemailer = require("nodemailer");
 
-admin.initializeApp();
-
 // Runs at 23:59 on the last day of every month
-exports.monthlySpendingReport = onSchedule("59 23 28-31 * *", async (event) => {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  if (tomorrow.getMonth() === today.getMonth()) return; // only run on actual last day
-
-  // Query each user's transactions for the month, generate .xlsx & send via Nodemailer
-});`}
+async function sendMonthlyReport(userEmail, transactions) {
+  // Query monthly transactions, format worksheet & email statement
+}`}
               </pre>
             </div>
           )}
