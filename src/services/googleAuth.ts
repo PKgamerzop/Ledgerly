@@ -111,25 +111,12 @@ async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken
   });
 }
 
-// Sign in with Google (tries GSI first for direct OAuth, falls back to Firebase)
+// Sign in with Google (Firebase Auth handles origin through firebaseapp.com, avoiding 400 origin_mismatch)
 export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken: string }> => {
   const oAuthClientId = (firebaseConfig as any).oAuthClientId;
 
-  // 1. Try Google Identity Services (GSI) first if client ID is present
-  if (oAuthClientId && (window as any).google?.accounts?.oauth2) {
-    try {
-      const gsiResult = await signInWithGSI(oAuthClientId);
-      return gsiResult;
-    } catch (gsiErr: any) {
-      // If user cancelled, don't fall through to popup
-      if (gsiErr?.code === 'auth/popup-closed-by-user') {
-        throw gsiErr;
-      }
-      console.warn('GSI flow notice, falling back to Firebase Auth:', gsiErr?.message || gsiErr);
-    }
-  }
-
-  // 2. Fall back to Firebase Auth Popup
+  // 1. Primary: Firebase Auth Popup
+  // Uses https://gen-lang-client-0847831288.firebaseapp.com/__/auth/handler which is pre-authorized in Google Cloud
   try {
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -155,9 +142,22 @@ export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken:
       throw blockedErr;
     }
 
+    // 2. Fallback to GSI if domain is not whitelisted in Firebase
+    if (errorCode === 'auth/unauthorized-domain' && oAuthClientId && (window as any).google?.accounts?.oauth2) {
+      try {
+        const gsiResult = await signInWithGSI(oAuthClientId);
+        return gsiResult;
+      } catch (gsiErr: any) {
+        if (gsiErr?.code === 'auth/popup-closed-by-user') {
+          throw gsiErr;
+        }
+        console.warn('GSI fallback also encountered notice:', gsiErr);
+      }
+    }
+
     if (errorCode === 'auth/unauthorized-domain' || error?.message?.includes('unauthorized-domain')) {
       const domainErr = new Error(
-        `Firebase has not authorized domain "${window.location.hostname}". You can sign in with Email & Password or Instant Demo below without any domain setup.`
+        `Firebase has not authorized domain "${window.location.hostname}". Please add this domain to Authorized Domains in Firebase Console.`
       );
       (domainErr as any).code = 'auth/unauthorized-domain';
       (domainErr as any).hostname = window.location.hostname;
