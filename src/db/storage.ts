@@ -1,4 +1,4 @@
-import { SpendingTransaction, Person, LedgerEntry, LedgerEntryType } from '../types';
+import { SpendingTransaction, TransactionType, Person, LedgerEntry, LedgerEntryType } from '../types';
 import { markLocalEdit } from '../services/googleDriveSync';
 
 // Event emitter helper for local reactive updates across views & tabs
@@ -58,15 +58,27 @@ function getInitialDemoTransactions(): SpendingTransaction[] {
       id: 'demo-tx-3',
       userId: 'demo-user-guest',
       amount: 28.0,
+      type: 'spent',
       reason: 'Metro Transit Monthly Pass',
       category: 'Transport',
       date: yesterday,
       createdAt: Date.now() - 90000000,
     },
     {
+      id: 'demo-tx-5',
+      userId: 'demo-user-guest',
+      amount: 50.0,
+      type: 'received',
+      reason: 'Cash Back & Refund Received',
+      category: 'General',
+      date: yesterday,
+      createdAt: Date.now() - 70000000,
+    },
+    {
       id: 'demo-tx-4',
       userId: 'demo-user-guest',
       amount: 85.0,
+      type: 'spent',
       reason: 'High-Speed Home Fiber Internet',
       category: 'Bills & Utilities',
       date: twoDaysAgo,
@@ -193,6 +205,7 @@ export async function addTransaction(
   userId: string,
   data: {
     amount: number;
+    type?: TransactionType;
     reason: string;
     date: string;
     category?: string;
@@ -216,6 +229,7 @@ export async function addTransaction(
     id: newId,
     userId,
     amount: Number(data.amount),
+    type: data.type || 'spent',
     reason: data.reason.trim(),
     date: data.date,
     category: data.category || 'General',
@@ -241,6 +255,7 @@ export async function updateTransaction(
     list[index] = {
       ...list[index],
       ...data,
+      type: data.type !== undefined ? data.type : (list[index].type || 'spent'),
       amount: data.amount !== undefined ? Number(data.amount) : list[index].amount,
       reason: data.reason !== undefined ? data.reason.trim() : list[index].reason,
       updatedAt: Date.now(),

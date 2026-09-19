@@ -14,62 +14,56 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onOpenReports,
 }) => {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-1.5 shadow-lg safe-area-pb">
-      <div className="grid grid-cols-4 items-center max-w-md mx-auto">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#14110e]/95 border-t-4 border-[#080604] px-3 py-2 shadow-2xl safe-area-pb">
+      <div className="mc-hotbar flex items-center justify-around max-w-sm mx-auto p-1.5 gap-1.5">
         <button
           id="mobile-tab-add"
           onClick={() => onTabChange('add')}
-          className={`flex flex-col items-center justify-center py-1 rounded-xl transition ${
-            currentTab === 'add'
-              ? 'text-teal-700 font-bold'
-              : 'text-slate-500 hover:text-slate-800'
+          className={`mc-hotbar-slot flex-1 py-1.5 flex flex-col items-center justify-center cursor-pointer ${
+            currentTab === 'add' ? 'active' : ''
           }`}
         >
-          <div className={`p-1 rounded-full ${currentTab === 'add' ? 'bg-teal-50 text-teal-700' : ''}`}>
-            <PlusCircle className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] mt-0.5">Add Spend</span>
+          <PlusCircle className={`w-5 h-5 ${currentTab === 'add' ? 'text-[#55ff55]' : 'text-[#a0a0a0]'}`} />
+          <span className={`font-mc text-[10px] mt-0.5 ${currentTab === 'add' ? 'text-[#55ff55] font-bold' : 'text-[#888888]'}`}>
+            Add
+          </span>
         </button>
 
         <button
           id="mobile-tab-history"
           onClick={() => onTabChange('history')}
-          className={`flex flex-col items-center justify-center py-1 rounded-xl transition ${
-            currentTab === 'history'
-              ? 'text-teal-700 font-bold'
-              : 'text-slate-500 hover:text-slate-800'
+          className={`mc-hotbar-slot flex-1 py-1.5 flex flex-col items-center justify-center cursor-pointer ${
+            currentTab === 'history' ? 'active' : ''
           }`}
         >
-          <div className={`p-1 rounded-full ${currentTab === 'history' ? 'bg-teal-50 text-teal-700' : ''}`}>
-            <History className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] mt-0.5">History</span>
+          <History className={`w-5 h-5 ${currentTab === 'history' ? 'text-[#55ff55]' : 'text-[#a0a0a0]'}`} />
+          <span className={`font-mc text-[10px] mt-0.5 ${currentTab === 'history' ? 'text-[#55ff55] font-bold' : 'text-[#888888]'}`}>
+            History
+          </span>
         </button>
 
         <button
           id="mobile-tab-people"
           onClick={() => onTabChange('people')}
-          className={`flex flex-col items-center justify-center py-1 rounded-xl transition ${
-            currentTab === 'people'
-              ? 'text-teal-700 font-bold'
-              : 'text-slate-500 hover:text-slate-800'
+          className={`mc-hotbar-slot flex-1 py-1.5 flex flex-col items-center justify-center cursor-pointer ${
+            currentTab === 'people' ? 'active' : ''
           }`}
         >
-          <div className={`p-1 rounded-full ${currentTab === 'people' ? 'bg-teal-50 text-teal-700' : ''}`}>
-            <Users className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] mt-0.5">Debts</span>
+          <Users className={`w-5 h-5 ${currentTab === 'people' ? 'text-[#55ff55]' : 'text-[#a0a0a0]'}`} />
+          <span className={`font-mc text-[10px] mt-0.5 ${currentTab === 'people' ? 'text-[#55ff55] font-bold' : 'text-[#888888]'}`}>
+            Debts
+          </span>
         </button>
 
         <button
           id="mobile-tab-report"
           onClick={onOpenReports}
-          className="flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 hover:text-slate-800 transition"
+          className="mc-hotbar-slot flex-1 py-1.5 flex flex-col items-center justify-center cursor-pointer"
         >
-          <div className="p-1 rounded-full">
-            <FileSpreadsheet className="w-5 h-5 text-teal-600" />
-          </div>
-          <span className="text-[11px] mt-0.5">Reports</span>
+          <FileSpreadsheet className="w-5 h-5 text-[#4de1f4]" />
+          <span className="font-mc text-[10px] mt-0.5 text-[#4de1f4]">
+            Report
+          </span>
         </button>
       </div>
     </nav>

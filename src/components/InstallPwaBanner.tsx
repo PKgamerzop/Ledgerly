@@ -65,31 +65,31 @@ export const InstallPwaBanner: React.FC = () => {
   }
 
   return (
-    <div id="pwa-install-banner" className="bg-gradient-to-r from-teal-900 to-cyan-900 text-white px-4 py-2.5 shadow-md flex items-center justify-between text-xs sm:text-sm">
+    <div id="pwa-install-banner" className="bg-[#1e1914] border-b-2 border-black text-white px-4 py-2.5 shadow-md flex items-center justify-between text-xs sm:text-sm">
       <div className="flex items-center gap-2.5">
-        <div className="p-1.5 bg-teal-500/20 rounded-lg text-teal-300">
+        <div className="p-1.5 bg-[#120f0c] border border-black text-[#55ff55]">
           <Smartphone className="w-4 h-4" />
         </div>
         <div>
-          <span className="font-semibold text-white">Install Ledgerly App:</span>
-          <span className="text-teal-200 ml-1 hidden sm:inline">Add to your home screen for full offline support and instant launch without browser badges.</span>
+          <span className="font-pixel text-[#ffd700]">Install Ledgerly:</span>
+          <span className="font-mc text-[#aaaaaa] ml-2 hidden sm:inline">Add to your home screen for full offline support and instant launch!</span>
         </div>
       </div>
       <div className="flex items-center gap-2">
         <button
           id="btn-install-pwa"
           onClick={handleInstallClick}
-          className="flex items-center gap-1.5 bg-teal-400 hover:bg-teal-300 text-teal-950 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm cursor-pointer"
+          className="mc-button mc-button-emerald flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
-          Install
+          <span>Install</span>
         </button>
         <button
           onClick={handleDismiss}
           aria-label="Dismiss banner"
-          className="p-1 text-teal-300 hover:text-white transition rounded-md"
+          className="mc-button p-1 cursor-pointer"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

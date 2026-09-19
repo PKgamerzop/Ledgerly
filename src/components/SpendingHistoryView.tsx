@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
-import { SpendingTransaction, TimeGrouping } from '../types';
+import { SpendingTransaction, TimeGrouping, TransactionType } from '../types';
 import { formatCurrency, formatDateDisplay, exportTransactionsToExcel } from '../utils/formatters';
 import { EditTransactionModal } from './EditTransactionModal';
 import {
@@ -14,6 +14,8 @@ import {
   Inbox,
   ArrowUpDown,
   TrendingUp,
+  TrendingDown,
+  ArrowDownLeft,
 } from 'lucide-react';
 
 interface SpendingHistoryViewProps {
@@ -32,6 +34,7 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
   const [grouping, setGrouping] = useState<TimeGrouping>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'spent' | 'received'>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [editingTransaction, setEditingTransaction] = useState<SpendingTransaction | null>(null);
 
@@ -53,7 +56,11 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
           t.date.includes(searchQuery);
         const matchesCategory =
           categoryFilter === 'all' || t.category === categoryFilter;
-        return matchesSearch && matchesCategory;
+        const matchesType =
+          typeFilter === 'all' ||
+          (typeFilter === 'received' ? t.type === 'received' : t.type !== 'received');
+
+        return matchesSearch && matchesCategory && matchesType;
       })
       .sort((a, b) => {
         if (sortOrder === 'newest') return b.date.localeCompare(a.date) || b.createdAt - a.createdAt;
@@ -62,7 +69,7 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
         if (sortOrder === 'lowest') return a.amount - b.amount;
         return 0;
       });
-  }, [transactions, searchQuery, categoryFilter, sortOrder]);
+  }, [transactions, searchQuery, categoryFilter, typeFilter, sortOrder]);
 
   // Grouped transactions
   const groupedData = useMemo(() => {
@@ -95,12 +102,25 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
     }));
   }, [filteredTransactions, grouping]);
 
-  // Total summary metrics
-  const totalAmount = useMemo(() => {
-    return filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+  // Total metrics: received amounts are subtracted from spent amounts
+  const netTotalAmount = useMemo(() => {
+    return filteredTransactions.reduce(
+      (sum, t) => sum + (t.type === 'received' ? -t.amount : t.amount),
+      0
+    );
   }, [filteredTransactions]);
 
-  const averageAmount = filteredTransactions.length > 0 ? totalAmount / filteredTransactions.length : 0;
+  const totalSpent = useMemo(() => {
+    return filteredTransactions
+      .filter((t) => t.type !== 'received')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [filteredTransactions]);
+
+  const totalReceived = useMemo(() => {
+    return filteredTransactions
+      .filter((t) => t.type === 'received')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [filteredTransactions]);
 
   const handleExport = () => {
     if (filteredTransactions.length === 0) return;
@@ -113,11 +133,11 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
       {/* Top Banner & Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="font-pixel text-2xl sm:text-3xl text-[#ffffff] tracking-wide drop-shadow-[2px_2px_0_#000]">
             Spending History
           </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Browse, group, edit, or export your recorded expenses.
+          <p className="font-mc text-xs sm:text-sm text-[#a0a0a0] mt-1">
+            Browse, filter, edit, or export recorded expenses and received income.
           </p>
         </div>
 
@@ -126,7 +146,7 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
             id="btn-export-excel-history"
             onClick={handleExport}
             disabled={filteredTransactions.length === 0}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+            className="mc-button mc-button-emerald flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold cursor-pointer disabled:opacity-40"
             title="Download formatted Excel workbook"
           >
             <Download className="w-4 h-4" />
@@ -135,54 +155,67 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
         </div>
       </div>
 
-      {/* Summary Stat Cards */}
+      {/* Summary Stat Cards (Net Total Spend, Total Spent, Total Received) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Spent</span>
-            <CreditCard className="w-4 h-4 text-teal-600" />
+        {/* Card 1: Net Total Spend (Spent minus Received) */}
+        <div className="mc-panel p-4">
+          <div className="flex items-center justify-between text-[#a0a0a0] mb-1">
+            <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
+              Net Total Spend
+            </span>
+            <CreditCard className="w-4 h-4 text-[#ffd700]" />
           </div>
-          <div className="text-2xl font-black text-[#0c3744]">
-            {formatCurrency(totalAmount, currency)}
+          <div
+            className={`font-pixel text-xl sm:text-2xl ${
+              netTotalAmount < 0 ? 'text-[#55ff55]' : 'text-[#ff5555]'
+            }`}
+          >
+            {formatCurrency(netTotalAmount, currency)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            Across {filteredTransactions.length} record{filteredTransactions.length === 1 ? '' : 's'}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider">Transactions</span>
-            <CalendarDays className="w-4 h-4 text-teal-600" />
-          </div>
-          <div className="text-2xl font-black text-slate-800">
-            {filteredTransactions.length}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            Filtered in current view
+          <div className="font-mc text-[10px] text-[#888888] mt-1">
+            Spent: {formatCurrency(totalSpent, currency)} | Recv: -{formatCurrency(totalReceived, currency)}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider">Average Spend</span>
-            <TrendingUp className="w-4 h-4 text-teal-600" />
+        {/* Card 2: Total Spent (Expenses) */}
+        <div className="mc-panel p-4">
+          <div className="flex items-center justify-between text-[#a0a0a0] mb-1">
+            <span className="font-pixel text-xs text-[#ff7777] uppercase tracking-wider">
+              Total Spent
+            </span>
+            <TrendingDown className="w-4 h-4 text-[#ff5555]" />
           </div>
-          <div className="text-2xl font-black text-slate-800">
-            {formatCurrency(averageAmount, currency)}
+          <div className="font-pixel text-xl sm:text-2xl text-[#ff5555]">
+            {formatCurrency(totalSpent, currency)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            Per transaction
+          <div className="font-mc text-[10px] text-[#888888] mt-1">
+            {filteredTransactions.filter((t) => t.type !== 'received').length} expense item(s)
+          </div>
+        </div>
+
+        {/* Card 3: Total Received (Subtracted) */}
+        <div className="mc-panel p-4">
+          <div className="flex items-center justify-between text-[#a0a0a0] mb-1">
+            <span className="font-pixel text-xs text-[#55ff55] uppercase tracking-wider">
+              Total Received
+            </span>
+            <TrendingUp className="w-4 h-4 text-[#55ff55]" />
+          </div>
+          <div className="font-pixel text-xl sm:text-2xl text-[#55ff55]">
+            +{formatCurrency(totalReceived, currency)}
+          </div>
+          <div className="font-mc text-[10px] text-[#55ff55]/80 mt-1">
+            Subtracted from total spend
           </div>
         </div>
       </div>
 
       {/* Control Bar: Grouping Tabs, Search, Filters & Sorting */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs mb-6 space-y-3">
-        {/* Requirement: Group by Day, Month, and Year */}
+      <div className="mc-panel p-4 mb-6 space-y-3">
+        {/* Group by Day, Month, and Year */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider mr-1">
+            <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider mr-1">
               Group by:
             </span>
             {(['all', 'day', 'month', 'year'] as TimeGrouping[]).map((g) => (
@@ -190,10 +223,8 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
                 key={g}
                 id={`btn-group-${g}`}
                 onClick={() => setGrouping(g)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
-                  grouping === g
-                    ? 'bg-[#0c3744] text-white shadow-xs'
-                    : 'bg-slate-100 hover:bg-slate-200/70 text-slate-700'
+                className={`mc-button text-[11px] px-2.5 py-1 uppercase font-bold cursor-pointer ${
+                  grouping === g ? 'mc-button-emerald' : ''
                 }`}
               >
                 {g}
@@ -203,44 +234,57 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
 
           {/* Sort order */}
           <div className="flex items-center gap-1.5">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#888888]" />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest')}
-              className="text-xs font-semibold bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-600 cursor-pointer"
+              className="mc-input text-xs font-bold py-1.5 px-2.5 text-[#ffffff] cursor-pointer"
             >
-              <option value="newest">Date: Newest First</option>
-              <option value="oldest">Date: Oldest First</option>
-              <option value="highest">Amount: High to Low</option>
-              <option value="lowest">Amount: Low to High</option>
+              <option value="newest" className="bg-[#25201b]">Date: Newest First</option>
+              <option value="oldest" className="bg-[#25201b]">Date: Oldest First</option>
+              <option value="highest" className="bg-[#25201b]">Amount: High to Low</option>
+              <option value="lowest" className="bg-[#25201b]">Amount: Low to High</option>
             </select>
           </div>
         </div>
 
-        {/* Search & Category filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-100">
+        {/* Search, Type Filter & Category filter */}
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2 border-t-2 border-[#15120e]">
           <div className="relative w-full sm:flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-[#888888] absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by reason or date (YYYY-MM)..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600"
+              placeholder="Search reason, note, or date (YYYY-MM)..."
+              className="mc-input w-full pl-9 pr-3 py-2 text-xs text-[#ffffff] placeholder:text-[#666666]"
             />
           </div>
 
+          {/* Type filter (All, Spent, Received) */}
+          <div className="flex items-center gap-1 w-full sm:w-auto">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'spent' | 'received')}
+              className="mc-input w-full sm:w-auto text-xs font-bold px-2.5 py-2 text-[#ffffff] cursor-pointer"
+            >
+              <option value="all" className="bg-[#25201b]">All Types</option>
+              <option value="spent" className="bg-[#25201b]">Spent Only</option>
+              <option value="received" className="bg-[#25201b]">Received Only</option>
+            </select>
+          </div>
+
           {categories.length > 0 && (
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-1 w-full sm:w-auto">
+              <Filter className="w-3.5 h-3.5 text-[#888888]" />
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full sm:w-auto text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600 cursor-pointer"
+                className="mc-input w-full sm:w-auto text-xs font-bold px-3 py-2 text-[#ffffff] cursor-pointer"
               >
-                <option value="all">All Categories</option>
+                <option value="all" className="bg-[#25201b]">All Categories</option>
                 {categories.map((c) => (
-                  <option key={c} value={c}>
+                  <option key={c} value={c} className="bg-[#25201b]">
                     {c}
                   </option>
                 ))}
@@ -254,12 +298,12 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-2xl p-4 border border-slate-200 animate-pulse flex items-center justify-between">
+            <div key={i} className="mc-panel p-4 animate-pulse flex items-center justify-between">
               <div className="space-y-2">
-                <div className="h-4 w-32 bg-slate-200 rounded"></div>
-                <div className="h-3 w-20 bg-slate-100 rounded"></div>
+                <div className="h-4 w-32 bg-[#332b24]"></div>
+                <div className="h-3 w-20 bg-[#28211a]"></div>
               </div>
-              <div className="h-6 w-16 bg-slate-200 rounded"></div>
+              <div className="h-6 w-16 bg-[#332b24]"></div>
             </div>
           ))}
         </div>
@@ -267,21 +311,21 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
 
       {/* Empty State */}
       {!loading && filteredTransactions.length === 0 && (
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-10 text-center shadow-xs">
-          <div className="w-16 h-16 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="mc-panel p-10 text-center">
+          <div className="w-16 h-16 bg-[#161310] border-2 border-black text-[#ffaa00] flex items-center justify-center mx-auto mb-4">
             <Inbox className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-extrabold text-slate-800">No Transactions Found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">
-            {searchQuery || categoryFilter !== 'all'
-              ? 'No spending records match your search filters. Try clearing your search.'
-              : 'You haven’t recorded any spending yet. Start logging your daily expenses now!'}
+          <h3 className="font-pixel text-lg text-[#ffffff]">No Transactions Found</h3>
+          <p className="font-mc text-xs text-[#888888] max-w-sm mx-auto mt-1 mb-6">
+            {searchQuery || categoryFilter !== 'all' || typeFilter !== 'all'
+              ? 'No spending or received records match your search filters. Try clearing filters.'
+              : 'You haven’t recorded any transactions yet. Start logging your expenses or received amounts!'}
           </p>
           <button
             onClick={onAddNew}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0c3744] hover:bg-[#124b5d] text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+            className="mc-button mc-button-emerald inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold cursor-pointer"
           >
-            Record New Spending
+            Record New Item
           </button>
         </div>
       )}
@@ -290,61 +334,87 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
       {!loading && filteredTransactions.length > 0 && (
         <div className="space-y-6">
           {groupedData.map(({ groupTitle, items }) => {
-            const groupSubtotal = items.reduce((sum, item) => sum + item.amount, 0);
+            // Group subtotal: received amounts subtract
+            const groupSubtotal = items.reduce(
+              (sum, item) => sum + (item.type === 'received' ? -item.amount : item.amount),
+              0
+            );
 
             return (
-              <div key={groupTitle} className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
+              <div key={groupTitle} className="mc-panel overflow-hidden">
                 {/* Group Header */}
-                <div className="bg-slate-50/90 px-4 py-3 border-b border-slate-200/70 flex items-center justify-between">
+                <div className="bg-[#1e1914] px-4 py-3 border-b-2 border-[#120e0a] flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-teal-700" />
-                    <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wider">
+                    <Calendar className="w-4 h-4 text-[#55ff55]" />
+                    <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
                       {groupTitle}
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="font-mc text-[11px] text-[#888888]">
                       ({items.length})
                     </span>
                   </div>
-                  <span className="font-black text-xs text-[#0c3744]">
-                    Subtotal: {formatCurrency(groupSubtotal, currency)}
+                  <span
+                    className={`font-pixel text-xs ${
+                      groupSubtotal < 0 ? 'text-[#55ff55]' : 'text-[#ff5555]'
+                    }`}
+                  >
+                    Net Subtotal: {formatCurrency(groupSubtotal, currency)}
                   </span>
                 </div>
 
                 {/* Group Items */}
-                <div className="divide-y divide-slate-100">
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition group"
-                    >
-                      <div className="flex flex-col pr-3">
-                        <span className="font-bold text-slate-900 text-sm">
-                          {item.reason}
-                        </span>
-                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                          <span>{formatDateDisplay(item.date)}</span>
-                          <span>•</span>
-                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-medium">
-                            {item.category || 'General'}
+                <div className="divide-y-2 divide-[#16120e]">
+                  {items.map((item) => {
+                    const isReceived = item.type === 'received';
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-4 flex items-center justify-between hover:bg-[#2e2721] transition group"
+                      >
+                        <div className="flex flex-col pr-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-[#ffffff] text-sm">
+                              {item.reason}
+                            </span>
+                            <span
+                              className={`font-pixel text-[9px] px-1.5 py-0.5 border ${
+                                isReceived
+                                  ? 'bg-[#1b3d1b] text-[#55ff55] border-[#2e7d32]'
+                                  : 'bg-[#3d1b1b] text-[#ff7777] border-[#8b2525]'
+                              }`}
+                            >
+                              {isReceived ? 'Received' : 'Spent'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-[#888888] mt-1 font-mc">
+                            <span>{formatDateDisplay(item.date)}</span>
+                            <span>•</span>
+                            <span className="mc-badge bg-[#1c1813] text-[#a0a0a0] px-2 py-0.5 text-[10px]">
+                              {item.category || 'General'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`font-pixel text-base ${
+                              isReceived ? 'text-[#55ff55]' : 'text-[#ff5555]'
+                            }`}
+                          >
+                            {isReceived ? '+' : '-'}{formatCurrency(item.amount, currency)}
                           </span>
+                          <button
+                            onClick={() => setEditingTransaction(item)}
+                            className="mc-button p-2 cursor-pointer text-[#ffd700]"
+                            title="Edit or Delete transaction"
+                            aria-label="Edit or delete transaction"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base font-black text-slate-900">
-                          {formatCurrency(item.amount, currency)}
-                        </span>
-                        <button
-                          onClick={() => setEditingTransaction(item)}
-                          className="p-2 text-slate-500 hover:text-teal-700 hover:bg-teal-50 bg-slate-100/80 rounded-xl transition cursor-pointer"
-                          title="Edit or Delete transaction"
-                          aria-label="Edit or delete transaction"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

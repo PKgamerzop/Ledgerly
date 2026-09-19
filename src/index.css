@@ -1,1 +1,273 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --mc-dirt: #3d2817;
+    --mc-dark-dirt: #26180d;
+    --mc-cobble: #474747;
+    --mc-deepslate: #202024;
+    --mc-bedrock: #141416;
+    --mc-gui: #c6c6c6;
+    --mc-gui-dark: #2a2824;
+    --mc-emerald: #17dd62;
+    --mc-redstone: #ff3333;
+    --mc-gold: #ffaa00;
+    --mc-diamond: #4de1f4;
+  }
+
+  body {
+    font-family: 'Pixelify Sans', 'Plus Jakarta Sans', system-ui, sans-serif;
+    background-color: #1a1612;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(30, 24, 18, 0.9) 0%, rgba(16, 12, 8, 0.98) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 16px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 16px);
+    background-size: auto, 16px 16px, 16px 16px;
+    image-rendering: pixelated;
+  }
+}
+
+/* Minecraft Pixel Font Utilities */
+.font-pixel {
+  font-family: 'Silkscreen', monospace;
+  letter-spacing: -0.5px;
+}
+
+.font-mc {
+  font-family: 'Pixelify Sans', sans-serif;
+}
+
+/* Minecraft Blocky 3D Bevel UI Styles */
+.mc-panel {
+  background-color: #2b2620;
+  border: 3px solid #100c08;
+  box-shadow: 
+    inset 3px 3px 0px #4d443a,
+    inset -3px -3px 0px #1a1612,
+    0 4px 8px rgba(0,0,0,0.5);
+  border-radius: 0px !important;
+}
+
+.mc-panel-stone {
+  background-color: #383838;
+  border: 3px solid #141414;
+  box-shadow: 
+    inset 3px 3px 0px #5c5c5c,
+    inset -3px -3px 0px #222222,
+    0 4px 10px rgba(0,0,0,0.6);
+  border-radius: 0px !important;
+}
+
+.mc-panel-light {
+  background-color: #c6c6c6;
+  border: 3px solid #000;
+  box-shadow: 
+    inset 3px 3px 0px #ffffff,
+    inset -3px -3px 0px #555555,
+    0 4px 8px rgba(0,0,0,0.4);
+  color: #1a1a1a;
+  border-radius: 0px !important;
+}
+
+/* Iconic Minecraft Classic Buttons */
+.mc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #585858;
+  border: 2px solid #000;
+  box-shadow: 
+    inset 2px 2px 0px #8b8b8b,
+    inset -2px -2px 0px #303030,
+    0 2px 0 #000;
+  color: #e0e0e0;
+  text-shadow: 2px 2px 0px #1b1b1b;
+  font-family: 'Pixelify Sans', sans-serif;
+  font-weight: 700;
+  transition: none;
+  cursor: pointer;
+  border-radius: 0px !important;
+  user-select: none;
+}
+
+.mc-button:hover:not(:disabled) {
+  background-color: #6e6e6e;
+  box-shadow: 
+    inset 2px 2px 0px #a2a2a2,
+    inset -2px -2px 0px #3c3c3c,
+    0 2px 0 #000;
+  color: #ffffff;
+}
+
+.mc-button:active:not(:disabled) {
+  background-color: #404040;
+  box-shadow: 
+    inset 2px 2px 0px #222222,
+    inset -2px -2px 0px #707070;
+  transform: translateY(2px);
+}
+
+.mc-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+/* Emerald Green Button (Add, Save, Confirm) */
+.mc-button-emerald {
+  background-color: #2e7d32;
+  border: 2px solid #0d3810;
+  box-shadow: 
+    inset 2px 2px 0px #57b85d,
+    inset -2px -2px 0px #1b4d1e,
+    0 2px 0 #000;
+  color: #ffffff;
+  text-shadow: 2px 2px 0px #0b2b0e;
+}
+.mc-button-emerald:hover:not(:disabled) {
+  background-color: #388e3c;
+  box-shadow: 
+    inset 2px 2px 0px #72d679,
+    inset -2px -2px 0px #255d29,
+    0 2px 0 #000;
+}
+.mc-button-emerald:active:not(:disabled) {
+  background-color: #1b5e20;
+  box-shadow: 
+    inset 2px 2px 0px #0d3310,
+    inset -2px -2px 0px #4caf50;
+  transform: translateY(2px);
+}
+
+/* Redstone Red Button (Cancel, Delete, Negative) */
+.mc-button-redstone {
+  background-color: #991b1b;
+  border: 2px solid #450a0a;
+  box-shadow: 
+    inset 2px 2px 0px #ef4444,
+    inset -2px -2px 0px #5f1010,
+    0 2px 0 #000;
+  color: #ffffff;
+  text-shadow: 2px 2px 0px #300505;
+}
+.mc-button-redstone:hover:not(:disabled) {
+  background-color: #b91c1c;
+  box-shadow: 
+    inset 2px 2px 0px #f87171,
+    inset -2px -2px 0px #781313,
+    0 2px 0 #000;
+}
+.mc-button-redstone:active:not(:disabled) {
+  background-color: #7f1d1d;
+  box-shadow: 
+    inset 2px 2px 0px #3b0707,
+    inset -2px -2px 0px #dc2626;
+  transform: translateY(2px);
+}
+
+/* Diamond Blue Button (Sync, Info, Vault) */
+.mc-button-diamond {
+  background-color: #0e7490;
+  border: 2px solid #083344;
+  box-shadow: 
+    inset 2px 2px 0px #38bdf8,
+    inset -2px -2px 0px #155e75,
+    0 2px 0 #000;
+  color: #ffffff;
+  text-shadow: 2px 2px 0px #04202c;
+}
+.mc-button-diamond:hover:not(:disabled) {
+  background-color: #0284c7;
+  box-shadow: 
+    inset 2px 2px 0px #67e8f9,
+    inset -2px -2px 0px #075985,
+    0 2px 0 #000;
+}
+
+/* Minecraft Inset Slot & Input */
+.mc-slot {
+  background-color: #171411;
+  border: 2px solid #000;
+  box-shadow: 
+    inset 2px 2px 0px #0a0806,
+    inset -2px -2px 0px #3b332b;
+  border-radius: 0px !important;
+}
+
+.mc-input {
+  background-color: #14110e;
+  border: 2px solid #000;
+  box-shadow: 
+    inset 2px 2px 0px #000000,
+    inset -2px -2px 0px #3d352c;
+  color: #ffffff;
+  font-family: 'Pixelify Sans', sans-serif;
+  border-radius: 0px !important;
+  outline: none;
+}
+.mc-input:focus {
+  border-color: #57b85d;
+  box-shadow: 
+    inset 2px 2px 0px #000000,
+    inset -2px -2px 0px #2e7d32,
+    0 0 0 1px #57b85d;
+}
+
+/* Minecraft Hotbar for Navigation */
+.mc-hotbar {
+  background-color: #2b251e;
+  border: 3px solid #110e0b;
+  box-shadow: 
+    inset 3px 3px 0px #4d4236,
+    inset -3px -3px 0px #181410,
+    0 4px 12px rgba(0,0,0,0.6);
+  border-radius: 0px !important;
+}
+
+.mc-hotbar-slot {
+  background-color: #181410;
+  border: 2px solid #000;
+  box-shadow: 
+    inset 2px 2px 0px #080604,
+    inset -2px -2px 0px #382e25;
+  transition: none;
+  border-radius: 0px !important;
+}
+
+.mc-hotbar-slot.active {
+  background-color: #3b3228;
+  border: 2px solid #fff;
+  box-shadow: 
+    inset 2px 2px 0px #5c4f40,
+    inset -2px -2px 0px #181410,
+    0 0 8px rgba(255,255,255,0.4);
+}
+
+/* Minecraft Tooltip & Badge */
+.mc-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid #000;
+  font-family: 'Pixelify Sans', sans-serif;
+  font-weight: 700;
+  text-shadow: 1px 1px 0px rgba(0,0,0,0.8);
+  border-radius: 0px !important;
+}
+
+/* Hide default scrollbars and pixelate */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #14110e;
+  border-left: 2px solid #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #473e34;
+  border: 2px solid #000;
+  box-shadow: inset 1px 1px 0px #6e6052, inset -1px -1px 0px #241f1a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5c5044;
+}

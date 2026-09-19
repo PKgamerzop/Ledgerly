@@ -44,29 +44,40 @@ export function exportTransactionsToExcel(
   // Sort by date ascending
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
   
-  const rows: Array<Record<string, string | number>> = sorted.map((t) => ({
-    Date: t.date,
-    Reason: t.reason,
-    Category: t.category || 'General',
-    Amount: Number(t.amount.toFixed(2)),
-  }));
+  const rows: Array<Record<string, string | number>> = sorted.map((t) => {
+    const isReceived = t.type === 'received';
+    return {
+      Date: t.date,
+      Type: isReceived ? 'Received' : 'Spent',
+      Reason: t.reason,
+      Category: t.category || 'General',
+      // Received amounts are negative values so totaling automatically subtracts them
+      Amount: isReceived ? -Number(t.amount.toFixed(2)) : Number(t.amount.toFixed(2)),
+    };
+  });
 
-  const total = sorted.reduce((sum, t) => sum + t.amount, 0);
+  // Net total: spent amounts add, received amounts subtract
+  const netTotal = sorted.reduce(
+    (sum, t) => sum + (t.type === 'received' ? -t.amount : t.amount),
+    0
+  );
 
   // Append empty row for spacing
   rows.push({
     Date: '',
+    Type: '',
     Reason: '',
     Category: '',
     Amount: '',
   });
 
-  // Final summary row as required: "Total Monthly Spend"
+  // Final summary row as required: "Net Total Monthly Spend"
   rows.push({
     Date: 'Summary',
-    Reason: 'Total Monthly Spend',
+    Type: '',
+    Reason: 'Net Total Spend (Spent - Received)',
     Category: '',
-    Amount: Number(total.toFixed(2)),
+    Amount: Number(netTotal.toFixed(2)),
   });
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -74,13 +85,14 @@ export function exportTransactionsToExcel(
   // Set column widths
   worksheet['!cols'] = [
     { wch: 14 }, // Date
+    { wch: 12 }, // Type
     { wch: 35 }, // Reason
     { wch: 18 }, // Category
     { wch: 16 }, // Amount
   ];
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Monthly Spending');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Spending Report');
 
   const fileName = `Ledgerly_Spending_Report_${periodTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
   XLSX.writeFile(workbook, fileName);

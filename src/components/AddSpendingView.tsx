@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { addTransaction } from '../db/storage';
-import { SpendingTransaction } from '../types';
+import { SpendingTransaction, TransactionType } from '../types';
 import { getTodayDateString, formatCurrency, formatDateDisplay } from '../utils/formatters';
 import {
   Calendar,
@@ -13,6 +13,8 @@ import {
   Clock,
   ArrowRight,
   TrendingDown,
+  TrendingUp,
+  ArrowDownLeft,
 } from 'lucide-react';
 
 interface AddSpendingViewProps {
@@ -20,7 +22,7 @@ interface AddSpendingViewProps {
   onViewHistory: () => void;
 }
 
-const CATEGORIES = [
+const SPENT_CATEGORIES = [
   'Food & Dining',
   'Groceries',
   'Transport',
@@ -31,6 +33,16 @@ const CATEGORIES = [
   'General',
 ];
 
+const RECEIVED_CATEGORIES = [
+  'Salary & Income',
+  'Refund',
+  'Cash Back',
+  'Gift',
+  'Loan Repayment',
+  'Freelance',
+  'General',
+];
+
 export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
   recentTransactions,
   onViewHistory,
@@ -38,6 +50,8 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
   const { user } = useAuth();
   const { currency } = useCurrency();
 
+  // Transaction type: 'spent' (default) or 'received' (subtracted during totaling)
+  const [type, setType] = useState<TransactionType>('spent');
   const [date, setDate] = useState<string>(getTodayDateString());
   const [amount, setAmount] = useState<string>('');
   const [reason, setReason] = useState<string>('');
@@ -47,11 +61,26 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
-  // Compute today's total from recent transactions
+  // Compute today's totals: received amount is subtracted from spent
   const todayStr = getTodayDateString();
-  const todayTotal = recentTransactions
-    .filter((t) => t.date === todayStr)
+  const todaySpent = recentTransactions
+    .filter((t) => t.date === todayStr && t.type !== 'received')
     .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayReceived = recentTransactions
+    .filter((t) => t.date === todayStr && t.type === 'received')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayNetTotal = todaySpent - todayReceived;
+
+  const handleTypeChange = (newType: TransactionType) => {
+    setType(newType);
+    if (newType === 'received' && category === 'Food & Dining') {
+      setCategory('Salary & Income');
+    } else if (newType === 'spent' && category === 'Salary & Income') {
+      setCategory('Food & Dining');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +98,11 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
 
     // Validation 2: Reason must not be empty
     if (!reason.trim()) {
-      setErrorMessage('Please provide a reason or note for this spending.');
+      setErrorMessage(
+        type === 'spent'
+          ? 'Please provide a reason or note for this spending.'
+          : 'Please provide a source or note for this received amount.'
+      );
       return;
     }
 
@@ -86,6 +119,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
       setSubmitting(true);
       await addTransaction(user.uid, {
         amount: parsedAmount,
+        type,
         reason: reason.trim(),
         date,
         category,
@@ -94,7 +128,11 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
       // Clear form inputs
       setAmount('');
       setReason('');
-      setSuccessNotice(`Recorded ${formatCurrency(parsedAmount, currency)} for "${reason.trim()}"`);
+      setSuccessNotice(
+        type === 'received'
+          ? `Recorded +${formatCurrency(parsedAmount, currency)} received for "${reason.trim()}" (subtracted from total)`
+          : `Recorded ${formatCurrency(parsedAmount, currency)} spent for "${reason.trim()}"`
+      );
 
       // Reset success notice after 4 seconds
       setTimeout(() => {
@@ -108,47 +146,96 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
     }
   };
 
+  const currentCategories = type === 'received' ? RECEIVED_CATEGORIES : SPENT_CATEGORIES;
+
   return (
     <div className="w-full max-w-xl mx-auto px-4 py-6 sm:py-10">
       {/* View Header */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-semibold mb-2">
-          <TrendingDown className="w-3.5 h-3.5 text-teal-600" />
-          Quick Spending Tracker
+        <div className="mc-badge bg-[#1b3d1b] border-2 border-black text-[#55ff55] px-3 py-1 text-xs mb-2">
+          {type === 'spent' ? (
+            <TrendingDown className="w-3.5 h-3.5 mr-1 text-[#ff5555]" />
+          ) : (
+            <TrendingUp className="w-3.5 h-3.5 mr-1 text-[#55ff55]" />
+          )}
+          <span>Quick Tracker</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Record New Spending
+        <h2 className="font-pixel text-2xl sm:text-3xl text-[#ffffff] tracking-wide drop-shadow-[2px_2px_0_#000]">
+          {type === 'spent' ? 'Record New Spending' : 'Record Received Amount'}
         </h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Add today's expenses instantly. Saved offline if you're disconnected.
+        <p className="font-mc text-xs sm:text-sm text-[#a0a0a0] mt-1">
+          {type === 'spent'
+            ? "Log expenses instantly. Added to your total spend."
+            : 'Log income, refunds, or cashback. Subtracted from total spend.'}
         </p>
       </div>
 
-      {/* Main Centered Add Transaction Form */}
-      <div className="bg-white rounded-3xl shadow-lg border border-slate-200/90 p-6 sm:p-8">
+      {/* Main Minecraft GUI Box */}
+      <div className="mc-panel p-6 sm:p-8">
         {errorMessage && (
-          <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs leading-relaxed">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <span>{errorMessage}</span>
+          <div className="mb-5 flex items-start gap-2.5 p-3 mc-panel bg-[#4a1414] border-2 border-[#1a0505] text-[#ff6b6b] text-xs leading-relaxed">
+            <AlertCircle className="w-4 h-4 text-[#ff4444] shrink-0 mt-0.5" />
+            <span className="font-mc">{errorMessage}</span>
           </div>
         )}
 
         {successNotice && (
-          <div className="mb-5 flex items-center gap-2 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{successNotice}</span>
+          <div className="mb-5 flex items-center gap-2 p-3 mc-panel bg-[#143d1a] border-2 border-[#091f0d] text-[#72ff72] text-xs font-bold">
+            <CheckCircle2 className="w-4 h-4 text-[#55ff55] shrink-0" />
+            <span className="font-mc">{successNotice}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Transaction Type Toggle: Spent (Default) vs Received */}
+          <div>
+            <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
+              Transaction Mode
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                id="btn-mode-spent"
+                type="button"
+                onClick={() => handleTypeChange('spent')}
+                className={`py-3 px-3 flex items-center justify-center gap-2 cursor-pointer font-pixel text-xs transition ${
+                  type === 'spent'
+                    ? 'mc-button mc-button-redstone text-[#ffffff]'
+                    : 'mc-button text-[#aaaaaa]'
+                }`}
+              >
+                <TrendingDown className={`w-4 h-4 ${type === 'spent' ? 'text-[#ffffff]' : 'text-[#ff5555]'}`} />
+                <span>Spent (Default)</span>
+              </button>
+
+              <button
+                id="btn-mode-received"
+                type="button"
+                onClick={() => handleTypeChange('received')}
+                className={`py-3 px-3 flex items-center justify-center gap-2 cursor-pointer font-pixel text-xs transition ${
+                  type === 'received'
+                    ? 'mc-button mc-button-emerald text-[#ffffff]'
+                    : 'mc-button text-[#aaaaaa]'
+                }`}
+              >
+                <TrendingUp className={`w-4 h-4 ${type === 'received' ? 'text-[#ffffff]' : 'text-[#55ff55]'}`} />
+                <span>Received (- Subtract)</span>
+              </button>
+            </div>
+            <p className="font-mc text-[11px] text-[#888888] mt-1.5">
+              {type === 'spent'
+                ? 'Spent amounts add to your total spending.'
+                : 'Received amounts are treated as negative values and subtracted when totaling.'}
+            </p>
+          </div>
+
           {/* Amount Input */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="spending-amount-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Amount Spent ({currency}) *
+              <label htmlFor="spending-amount-input" className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
+                {type === 'spent' ? 'Amount Spent' : 'Amount Received'} ({currency}) *
               </label>
               {/* Quick amount adders for mobile */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {[10, 50, 100, 500].map((inc) => (
                   <button
                     key={inc}
@@ -157,7 +244,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                       const cur = parseFloat(amount) || 0;
                       setAmount((cur + inc).toFixed(cur % 1 === 0 ? 0 : 2));
                     }}
-                    className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition"
+                    className="mc-button text-[10px] px-1.5 py-0.5"
                   >
                     +{inc}
                   </button>
@@ -165,7 +252,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
               </div>
             </div>
             <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg pointer-events-none select-none">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ffd700] font-pixel text-lg pointer-events-none select-none">
                 {currency}
               </div>
               <input
@@ -177,44 +264,46 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-2xl font-extrabold text-slate-900 placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent transition"
+                className="mc-input w-full pl-12 pr-4 py-3 text-2xl font-bold text-[#ffffff] placeholder:text-[#555555]"
               />
             </div>
           </div>
 
           {/* Reason Input */}
           <div>
-            <label htmlFor="spending-reason-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Reason / Description *
+            <label htmlFor="spending-reason-input" className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
+              {type === 'spent' ? 'Reason / Description *' : 'Source / Description *'}
             </label>
             <div className="relative">
-              <Tag className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <Tag className="w-4 h-4 text-[#888888] absolute left-3.5 top-3.5" />
               <input
                 id="spending-reason-input"
                 type="text"
                 required
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Lunch with team, Groceries, Uber"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent transition"
+                placeholder={
+                  type === 'spent'
+                    ? 'e.g. Bread, Golden Apples, Iron Ingot, Lunch'
+                    : 'e.g. Salary, Freelance project, Cashback, Refund, Gift'
+                }
+                className="mc-input w-full pl-10 pr-4 py-2.5 text-sm text-[#ffffff] placeholder:text-[#666666]"
               />
             </div>
           </div>
 
-          {/* Date Picker with Quick Date Pills for Mobile */}
+          {/* Date Picker with Quick Date Pills */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="spending-date-input" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <label htmlFor="spending-date-input" className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
                 Date *
               </label>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setDate(getTodayDateString())}
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition ${
-                    date === getTodayDateString()
-                      ? 'bg-teal-700 text-white'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  className={`mc-button text-[10px] px-2 py-0.5 ${
+                    date === getTodayDateString() ? 'mc-button-emerald' : ''
                   }`}
                 >
                   Today
@@ -225,10 +314,10 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                     const y = new Date(Date.now() - 86400000);
                     setDate(y.toISOString().split('T')[0]);
                   }}
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition ${
+                  className={`mc-button text-[10px] px-2 py-0.5 ${
                     date === new Date(Date.now() - 86400000).toISOString().split('T')[0]
-                      ? 'bg-teal-700 text-white'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      ? 'mc-button-emerald'
+                      : ''
                   }`}
                 >
                   Yesterday
@@ -236,33 +325,31 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
               </div>
             </div>
             <div className="relative">
-              <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <Calendar className="w-4 h-4 text-[#888888] absolute left-3.5 top-3.5" />
               <input
                 id="spending-date-input"
                 type="date"
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent transition"
+                className="mc-input w-full pl-10 pr-4 py-2.5 text-sm text-[#ffffff]"
               />
             </div>
           </div>
 
           {/* Category Quick Tags */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
               Category
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {CATEGORIES.map((cat) => (
+            <div className="flex flex-wrap gap-2">
+              {currentCategories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setCategory(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    category === cat
-                      ? 'bg-teal-700 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200/70 text-slate-700'
+                  className={`mc-button px-2.5 py-1 text-xs cursor-pointer ${
+                    category === cat ? 'mc-button-emerald' : ''
                   }`}
                 >
                   {cat}
@@ -276,14 +363,20 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
             id="btn-save-spending"
             type="submit"
             disabled={submitting}
-            className="w-full mt-4 flex items-center justify-center gap-2 bg-[#0c3744] hover:bg-[#124d5e] active:scale-[0.99] text-white py-3.5 px-6 rounded-2xl font-bold text-base shadow-md transition disabled:opacity-50 cursor-pointer"
+            className={`mc-button w-full mt-4 py-3.5 px-6 font-bold text-base cursor-pointer ${
+              type === 'received' ? 'mc-button-emerald' : 'mc-button-emerald'
+            }`}
           >
             {submitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                <CheckCircle2 className="w-5 h-5 text-teal-300" />
-                <span>Save Spending</span>
+                {type === 'received' ? (
+                  <TrendingUp className="w-5 h-5 mr-2 text-[#55ff55]" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 mr-2 text-[#55ff55]" />
+                )}
+                <span>{type === 'received' ? 'Save Received Amount' : 'Save Spending'}</span>
               </>
             )}
           </button>
@@ -291,35 +384,58 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
       </div>
 
       {/* Snapshot of Today's Spending & Recent Transactions */}
-      <div className="mt-8 bg-white/70 backdrop-blur-xs rounded-2xl border border-slate-200/70 p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div className="mt-8 mc-panel p-5">
+        <div className="flex items-center justify-between pb-3 border-b-2 border-[#15120e]">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-500" />
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Today's Spend
+            <Clock className="w-4 h-4 text-[#ffaa00]" />
+            <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
+              Today's Net Spend
             </span>
           </div>
-          <span className="text-sm font-extrabold text-[#0c3744]">
-            {formatCurrency(todayTotal, currency)}
-          </span>
+          <div className="text-right">
+            <span className={`font-pixel text-base ${todayNetTotal < 0 ? 'text-[#55ff55]' : 'text-[#ffd700]'}`}>
+              {formatCurrency(todayNetTotal, currency)}
+            </span>
+            {(todaySpent > 0 && todayReceived > 0) && (
+              <div className="font-mc text-[10px] text-[#888888] mt-0.5">
+                Spent: {formatCurrency(todaySpent, currency)} | Recv: -{formatCurrency(todayReceived, currency)}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-3 divide-y divide-slate-100">
-          {recentTransactions.slice(0, 3).map((t) => (
-            <div key={t.id} className="py-2.5 flex items-center justify-between text-xs">
-              <div className="flex flex-col">
-                <span className="font-semibold text-slate-800">{t.reason}</span>
-                <span className="text-slate-400 text-[11px]">{formatDateDisplay(t.date)} • {t.category || 'General'}</span>
+        <div className="mt-3 divide-y-2 divide-[#15120e]">
+          {recentTransactions.slice(0, 4).map((t) => {
+            const isReceived = t.type === 'received';
+            return (
+              <div key={t.id} className="py-2.5 flex items-center justify-between text-xs">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-[#ffffff]">{t.reason}</span>
+                    <span
+                      className={`font-pixel text-[9px] px-1 py-0.2 border ${
+                        isReceived
+                          ? 'bg-[#1b3d1b] text-[#55ff55] border-[#2e7d32]'
+                          : 'bg-[#3d1b1b] text-[#ff7777] border-[#8b2525]'
+                      }`}
+                    >
+                      {isReceived ? 'Received' : 'Spent'}
+                    </span>
+                  </div>
+                  <span className="text-[#888888] text-[11px] font-mc">
+                    {formatDateDisplay(t.date)} • {t.category || 'General'}
+                  </span>
+                </div>
+                <span className={`font-pixel text-sm ${isReceived ? 'text-[#55ff55]' : 'text-[#ff5555]'}`}>
+                  {isReceived ? '+' : '-'}{formatCurrency(t.amount, currency)}
+                </span>
               </div>
-              <span className="font-bold text-slate-900 text-sm">
-                {formatCurrency(t.amount, currency)}
-              </span>
-            </div>
-          ))}
+            );
+          })}
 
           {recentTransactions.length === 0 && (
-            <div className="py-4 text-center text-xs text-slate-400">
-              No transactions recorded yet. Add your first above!
+            <div className="py-4 text-center text-xs text-[#888888] font-mc">
+              No items in chest yet. Add your first above!
             </div>
           )}
         </div>
@@ -328,7 +444,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
           <button
             id="btn-view-all-history"
             onClick={onViewHistory}
-            className="w-full mt-3 pt-2 text-center text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center justify-center gap-1 cursor-pointer"
+            className="mc-button w-full mt-3 py-2 text-center text-xs font-bold text-[#55ffff] flex items-center justify-center gap-1 cursor-pointer"
           >
             <span>View All Spending History</span>
             <ArrowRight className="w-3.5 h-3.5" />

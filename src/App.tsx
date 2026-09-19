@@ -85,15 +85,20 @@ function MainApp() {
     };
   }, [user]);
 
-  // Loading Screen
+  // Loading Screen (Minecraft Style)
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="w-16 h-16 mb-4 animate-pulse">
-          <img src="/logo.svg" alt="Ledgerly" className="w-full h-full object-contain" />
+      <div className="min-h-screen bg-[#181410] flex flex-col items-center justify-center p-4 text-[#e0e0e0]">
+        <div className="w-16 h-16 mb-4 animate-bounce">
+          <img src="/logo.svg" alt="Ledgerly" className="w-full h-full object-contain filter drop-shadow-[0_4px_0_#000]" />
         </div>
-        <div className="w-6 h-6 border-2 border-[#0c3744]/20 border-t-[#0c3744] rounded-full animate-spin"></div>
-        <p className="text-xs font-semibold text-slate-500 mt-3 tracking-wider uppercase">Loading Ledgerly...</p>
+        <div className="mc-panel-stone px-6 py-4 text-center max-w-xs w-full mb-3">
+          <div className="font-pixel text-base text-[#ffd700] tracking-wider mb-2">LEDGERLY</div>
+          <div className="w-full bg-[#14110e] border-2 border-black p-0.5">
+            <div className="h-3 bg-[#55b855] animate-pulse w-3/4"></div>
+          </div>
+          <p className="font-pixel text-[11px] text-[#a0a0a0] mt-3 uppercase tracking-wider">Loading Terrain...</p>
+        </div>
       </div>
     );
   }
@@ -104,7 +109,7 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#181410] text-[#e0e0e0] flex flex-col antialiased selection:bg-[#2e7d32] selection:text-white">
       {/* PWA Install Banner */}
       <InstallPwaBanner />
 
@@ -116,7 +121,7 @@ function MainApp() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 md:pb-12">
+      <main className="flex-1 pb-28 md:pb-14">
         {currentTab === 'add' && (
           <AddSpendingView
             recentTransactions={transactions}

@@ -55,78 +55,80 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-xs">
+      <header className="sticky top-0 z-40 bg-[#25201b] border-b-4 border-[#100d0a] shadow-lg">
         <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between">
           {/* Brand Logo & Name */}
           <div
             onClick={() => onTabChange('add')}
             className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none"
           >
-            <img
-              src="/logo.svg"
-              alt="Ledgerly Logo"
-              className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-lg shadow-xs group-hover:scale-105 transition-transform"
-            />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 p-1 bg-[#171411] border-2 border-black shadow-[inset_1px_1px_0_#4a423a,inset_-1px_-1px_0_#080605] flex items-center justify-center group-hover:scale-105 transition-transform">
+              <img
+                src="/logo.svg"
+                alt="Ledgerly Logo"
+                className="w-full h-full object-contain"
+              />
+            </div>
             <div className="flex flex-col">
-              <span className="text-lg sm:text-xl font-extrabold tracking-wider text-[#0c3744] leading-tight">
+              <span className="font-pixel text-base sm:text-lg text-[#55ff55] tracking-wider drop-shadow-[2px_2px_0px_#000]">
                 LEDGERLY
               </span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-teal-600 hidden sm:block">
-                Spending & Debts
+              <span className="font-mc text-[11px] text-[#ffaa00] uppercase font-bold tracking-wider hidden sm:block">
+                ★ Spending & Debts
               </span>
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+          {/* Desktop Navigation Links (Minecraft Hotbar Style Tabs) */}
+          <nav className="hidden md:flex items-center gap-1.5 bg-[#171411] p-1.5 border-2 border-black shadow-[inset_2px_2px_0_#0a0806,inset_-2px_-2px_0_#38322a]">
             <button
               id="nav-tab-add"
               onClick={() => onTabChange('add')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
                 currentTab === 'add'
-                  ? 'bg-[#0c3744] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? 'mc-button mc-button-emerald'
+                  : 'mc-button'
               }`}
             >
-              <PlusCircle className="w-4 h-4" />
-              Add Spending
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Add Spending</span>
             </button>
             <button
               id="nav-tab-history"
               onClick={() => onTabChange('history')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
                 currentTab === 'history'
-                  ? 'bg-[#0c3744] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? 'mc-button mc-button-emerald'
+                  : 'mc-button'
               }`}
             >
-              <History className="w-4 h-4" />
-              History
+              <History className="w-3.5 h-3.5" />
+              <span>History</span>
             </button>
             <button
               id="nav-tab-people"
               onClick={() => onTabChange('people')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
                 currentTab === 'people'
-                  ? 'bg-[#0c3744] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  ? 'mc-button mc-button-emerald'
+                  : 'mc-button'
               }`}
             >
-              <Users className="w-4 h-4" />
-              People (Debts)
+              <Users className="w-3.5 h-3.5" />
+              <span>People (Debts)</span>
             </button>
             <button
               id="nav-tab-reports"
               onClick={onOpenReports}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-teal-700 hover:bg-slate-200/60 transition cursor-pointer"
+              className="mc-button mc-button-diamond flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 text-teal-600" />
-              Excel Report
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#55ffff]" />
+              <span>Excel Report</span>
             </button>
           </nav>
 
           {/* Right Tools: Sync Button, Currency, Menu */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Google Drive Sync Pill */}
             {googleToken ? (
               <button
@@ -134,16 +136,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={handleSyncClick}
                 disabled={isSyncing}
                 title={syncStatus === 'error' ? 'Sync notice - click to see details' : 'Sync with Google Drive'}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border transition cursor-pointer ${
+                className={`mc-button text-[11px] sm:text-xs px-2.5 py-1.5 flex items-center gap-1.5 ${
                   syncStatus === 'error'
-                    ? 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'
-                    : 'bg-teal-50 border-teal-200/80 text-teal-800 hover:bg-teal-100'
+                    ? 'mc-button-redstone'
+                    : 'mc-button-diamond'
                 }`}
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${
-                    syncStatus === 'error' ? 'text-rose-600' : 'text-teal-600'
-                  } ${isSyncing || syncStatus === 'syncing' ? 'animate-spin' : ''}`}
+                    isSyncing || syncStatus === 'syncing' ? 'animate-spin' : ''
+                  }`}
                 />
                 <span className="hidden sm:inline">
                   {isSyncing || syncStatus === 'syncing'
@@ -157,22 +159,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                className="flex items-center gap-1 text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-full bg-slate-100 hover:bg-teal-50 border border-slate-200 hover:border-teal-200 text-slate-600 hover:text-teal-800 transition cursor-pointer"
+                className="mc-button text-[11px] sm:text-xs px-2.5 py-1.5 flex items-center gap-1 text-[#4de1f4]"
                 title="Connect Google Drive to sync with PC"
               >
-                <Cloud className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[11px] sm:text-xs">Link Drive</span>
+                <Cloud className="w-3.5 h-3.5 text-[#4de1f4]" />
+                <span>Link Drive</span>
               </button>
             )}
 
             {/* Offline indicator */}
             {isOffline && (
               <div
-                className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-1 rounded-full text-xs font-medium"
+                className="mc-badge bg-[#7a2a0d] text-[#ffaa00] px-2 py-1 text-[10px] border-2 border-black"
                 title="Offline - Saving locally"
               >
-                <WifiOff className="w-3.5 h-3.5 text-amber-600" />
-                <span className="hidden lg:inline text-[11px]">Offline</span>
+                <WifiOff className="w-3.5 h-3.5 mr-1 text-[#ffaa00]" />
+                <span className="hidden lg:inline">Offline</span>
               </div>
             )}
 
@@ -185,11 +187,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="currency-select"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="bg-slate-100 hover:bg-slate-200/70 text-slate-700 font-bold text-xs py-1.5 px-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                className="mc-input text-xs font-bold py-1.5 px-2.5 border-2 border-black cursor-pointer text-[#ffd700]"
                 title="Change Currency Symbol"
               >
                 {currencyList.map((c) => (
-                  <option key={c.code} value={c.symbol}>
+                  <option key={c.code} value={c.symbol} className="bg-[#25201b] text-white">
                     {c.symbol} ({c.code})
                   </option>
                 ))}
@@ -198,20 +200,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Desktop User profile & Logout */}
             {user && (
-              <div className="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="hidden md:flex items-center gap-2 pl-2 border-l-2 border-[#120e0a]">
                 <span
-                  className="text-xs text-slate-500 max-w-[120px] truncate"
+                  className="font-mc text-xs text-[#a0a0a0] max-w-[120px] truncate"
                   title={user.email || 'User'}
                 >
-                  {user.email || user.displayName || 'User'}
+                  {user.displayName || user.email?.split('@')[0] || 'Player'}
                 </span>
                 <button
                   id="btn-logout-desktop"
                   onClick={() => logout()}
-                  className="flex items-center gap-1 p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition text-xs font-semibold cursor-pointer"
+                  className="mc-button mc-button-redstone p-1.5 transition text-xs font-bold cursor-pointer"
                   title="Sign out"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -221,18 +223,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="btn-mobile-menu-toggle"
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden flex items-center gap-1.5 p-2 text-slate-700 hover:text-[#0c3744] hover:bg-slate-100 rounded-xl transition cursor-pointer border border-slate-200/60"
+              className="md:hidden mc-button p-2 flex items-center gap-1.5 text-xs font-bold"
               aria-label="Open mobile menu"
             >
               {user?.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt="Avatar"
-                  className="w-6 h-6 rounded-full object-cover border border-teal-500"
+                  className="w-5 h-5 border border-black object-cover"
                 />
               ) : (
-                <div className="w-6 h-6 rounded-full bg-teal-800 text-teal-100 flex items-center justify-center font-bold text-xs">
-                  {user?.displayName ? user.displayName[0].toUpperCase() : 'U'}
+                <div className="w-5 h-5 bg-[#2e7d32] border border-black text-[#55ff55] flex items-center justify-center font-bold text-[10px]">
+                  {user?.displayName ? user.displayName[0].toUpperCase() : 'P'}
                 </div>
               )}
               <Menu className="w-4 h-4" />

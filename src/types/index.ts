@@ -6,10 +6,13 @@ export interface UserProfile {
   createdAt?: string;
 }
 
+export type TransactionType = 'spent' | 'received';
+
 export interface SpendingTransaction {
   id: string;
   userId: string;
   amount: number;
+  type?: TransactionType; // 'spent' (default) or 'received' (subtracted during totaling)
   reason: string;
   date: string; // YYYY-MM-DD
   category?: string;

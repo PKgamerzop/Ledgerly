@@ -109,57 +109,59 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
       />
 
       {/* Drawer Panel */}
-      <div className="relative ml-auto w-full max-w-xs sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 overflow-y-auto">
+      <div className="relative ml-auto w-full max-w-xs sm:max-w-sm mc-panel h-full shadow-2xl flex flex-col z-10 overflow-y-auto p-0 border-r-0">
         {/* Drawer Header */}
-        <div className="p-4 bg-[#0c3744] text-white flex items-center justify-between">
+        <div className="p-4 bg-[#1e1914] border-b-2 border-[#120f0c] text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/logo.svg"
-              alt="Logo"
-              className="w-8 h-8 rounded-lg bg-white/10 p-0.5 object-contain"
-            />
+            <div className="w-8 h-8 bg-[#120f0c] border-2 border-black flex items-center justify-center shadow-[inset_1px_1px_0_#2b241e,inset_-1px_-1px_0_#0a0806]">
+              <img
+                src="/logo.svg"
+                alt="Logo"
+                className="w-5 h-5 object-contain"
+              />
+            </div>
             <div>
-              <div className="font-extrabold text-base tracking-wide">Menu & Options</div>
-              <div className="text-[11px] text-teal-200">Personal Finance & Sync</div>
+              <div className="font-pixel text-[#ffd700] text-sm tracking-wide">Menu & Options</div>
+              <div className="font-mc text-[11px] text-[#a0a0a0]">Personal Finance & Sync</div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-teal-200 hover:text-white rounded-lg hover:bg-white/10 transition cursor-pointer"
+            className="mc-button p-1 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* User Card */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200">
+        <div className="p-4 bg-[#231e19] border-b-2 border-[#120f0c]">
           <div className="flex items-center gap-3">
             {user?.photoURL ? (
               <img
                 src={user.photoURL}
                 alt="Avatar"
-                className="w-11 h-11 rounded-full object-cover border-2 border-teal-500"
+                className="w-11 h-11 border-2 border-black object-cover"
               />
             ) : (
-              <div className="w-11 h-11 rounded-full bg-teal-800 text-teal-100 flex items-center justify-center font-bold text-base">
+              <div className="w-11 h-11 border-2 border-black bg-[#120f0c] text-[#ffd700] flex items-center justify-center font-pixel text-base">
                 {user?.displayName ? user.displayName[0].toUpperCase() : 'U'}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-slate-900 text-sm truncate">
-                {user?.displayName || 'User'}
+              <div className="font-pixel text-[#ffffff] text-xs truncate">
+                {user?.displayName || 'Steve'}
               </div>
-              <div className="text-xs text-slate-500 truncate">{user?.email || 'Guest Mode'}</div>
+              <div className="font-mc text-xs text-[#888888] truncate">{user?.email || 'Guest Mode'}</div>
               {googleToken ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full mt-1">
-                  Google Drive Linked
+                <span className="inline-flex items-center gap-1 font-pixel text-[10px] text-[#55ff55] bg-[#1b3d1b] border border-black px-2 py-0.5 mt-1">
+                  Drive Linked
                 </span>
               ) : user?.isDemo ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full mt-1">
+                <span className="inline-flex items-center gap-1 font-pixel text-[10px] text-[#ffaa00] bg-[#3d2714] border border-black px-2 py-0.5 mt-1">
                   Demo Sandbox
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full mt-1">
+                <span className="inline-flex items-center gap-1 font-pixel text-[10px] text-[#aaaaaa] bg-[#161310] border border-black px-2 py-0.5 mt-1">
                   Local Session
                 </span>
               )}
@@ -168,48 +170,48 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
         </div>
 
         {/* Scrollable Options List */}
-        <div className="p-4 space-y-5 flex-1">
+        <div className="p-4 space-y-5 flex-1 bg-[#2b2520]">
           {/* Google Drive Sync Section */}
-          <div className="bg-teal-50/70 border border-teal-200/80 rounded-2xl p-3.5 space-y-2.5">
+          <div className="mc-panel p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-teal-950 flex items-center gap-1.5 uppercase tracking-wider">
-                <Cloud className="w-4 h-4 text-teal-700" />
+              <span className="font-pixel text-xs text-[#ffd700] flex items-center gap-1.5 uppercase tracking-wider">
+                <Cloud className="w-4 h-4 text-[#55ffff]" />
                 Google Drive Sync
               </span>
               {googleToken ? (
-                <span className="text-[11px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
+                <span className="mc-badge bg-[#1b3d1b] text-[#55ff55] px-2 py-0.5 text-[10px]">
                   {syncStatus === 'syncing' || isSyncing ? 'Syncing...' : 'Connected'}
                 </span>
               ) : (
-                <span className="text-[11px] text-slate-500 font-semibold">Not Linked</span>
+                <span className="font-mc text-[11px] text-[#888888]">Not Linked</span>
               )}
             </div>
 
-            <p className="text-xs text-teal-900/90 leading-relaxed">
+            <p className="font-mc text-xs text-[#aaaaaa] leading-relaxed">
               Syncs your spending and debts between your mobile phone and PC using your private
               Google Drive file.
             </p>
 
             {googleToken ? (
               <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-[11px] text-teal-900">
+                <div className="flex items-center justify-between font-mc text-[11px] text-[#ffffff]">
                   <span>Last synced:</span>
-                  <span className="font-bold">{formatLastSync(lastSyncTimestamp)}</span>
+                  <span className="font-pixel text-[#55ff55]">{formatLastSync(lastSyncTimestamp)}</span>
                 </div>
 
                 {syncError && (
-                  <div className="text-[11px] text-rose-800 bg-rose-50 border border-rose-200 p-2.5 rounded-xl space-y-1">
+                  <div className="font-mc text-[11px] text-[#ff6b6b] bg-[#4a1414] border-2 border-black p-2.5 space-y-1">
                     <div className="flex items-start gap-1.5 font-bold">
-                      <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
-                      <span>Drive Sync Notice</span>
+                      <AlertCircle className="w-3.5 h-3.5 text-[#ff4444] shrink-0 mt-0.5" />
+                      <span className="font-pixel text-xs">Drive Sync Notice</span>
                     </div>
-                    <p className="text-[11px] text-rose-700 leading-snug break-words">{syncError}</p>
+                    <p className="text-[11px] text-[#ffaaaa] leading-snug break-words">{syncError}</p>
                     {syncError.includes('drive.googleapis.com') && (
                       <a
                         href="https://console.cloud.google.com/apis/library/drive.googleapis.com?project=gen-lang-client-0847831288"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-block mt-1 font-bold text-teal-800 underline hover:text-teal-900 text-xs"
+                        className="inline-block mt-1 font-bold text-[#55ffff] underline text-xs"
                       >
                         👉 Click here to Enable Google Drive API (1-click)
                       </a>
@@ -221,7 +223,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   type="button"
                   onClick={() => handleManualSync()}
                   disabled={isSyncing}
-                  className="w-full py-2 bg-teal-700 hover:bg-teal-800 active:scale-98 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                  className="mc-button mc-button-emerald w-full py-2 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                   <span>{isSyncing ? 'Syncing...' : 'Sync with Drive Now'}</span>
@@ -231,19 +233,19 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   <button
                     type="button"
                     onClick={handlePushPrompt}
-                    className="py-1.5 px-2 bg-white border border-teal-200 text-teal-900 rounded-lg text-[11px] font-semibold hover:bg-teal-100/50 flex items-center justify-center gap-1 cursor-pointer"
+                    className="mc-button py-1.5 px-2 text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer"
                     title="Upload current local state to Drive"
                   >
-                    <Upload className="w-3 h-3 text-teal-600" />
+                    <Upload className="w-3 h-3 text-[#55ffff]" />
                     <span>Backup</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleRestorePrompt}
-                    className="py-1.5 px-2 bg-white border border-teal-200 text-teal-900 rounded-lg text-[11px] font-semibold hover:bg-teal-100/50 flex items-center justify-center gap-1 cursor-pointer"
+                    className="mc-button py-1.5 px-2 text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer"
                     title="Pull latest data from Drive to this device"
                   >
-                    <Download className="w-3 h-3 text-teal-600" />
+                    <Download className="w-3 h-3 text-[#55ffff]" />
                     <span>Restore</span>
                   </button>
                 </div>
@@ -261,7 +263,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                     console.warn('Google Drive link notice:', e?.message || e);
                   }
                 }}
-                className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                className="mc-button w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
               >
                 <img
                   src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
@@ -275,8 +277,8 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
 
           {/* Quick Currency Selector */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-slate-500" />
+            <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Coins className="w-4 h-4 text-[#ffd700]" />
               Active Currency
             </label>
             <div className="grid grid-cols-4 gap-1.5">
@@ -285,14 +287,14 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   key={c.code}
                   type="button"
                   onClick={() => setCurrency(c.symbol)}
-                  className={`py-2 px-1 text-center rounded-xl text-xs font-bold border transition cursor-pointer ${
+                  className={`py-2 px-1 text-center font-pixel text-xs transition cursor-pointer ${
                     currency === c.symbol
-                      ? 'bg-[#0c3744] text-white border-[#0c3744] shadow-xs'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      ? 'mc-button mc-button-emerald text-[#55ff55]'
+                      : 'mc-button'
                   }`}
                 >
                   <div className="text-sm">{c.symbol}</div>
-                  <div className="text-[10px] opacity-80">{c.code}</div>
+                  <div className="font-mc text-[10px] opacity-80">{c.code}</div>
                 </button>
               ))}
             </div>
@@ -300,7 +302,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
 
           {/* Navigation Links */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
               Navigation
             </label>
             <div className="space-y-1">
@@ -310,13 +312,13 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   onTabChange('add');
                   onClose();
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold transition font-pixel ${
                   currentTab === 'add'
-                    ? 'bg-slate-100 text-teal-800 font-extrabold'
-                    : 'text-slate-700 hover:bg-slate-50'
+                    ? 'mc-button mc-button-emerald text-[#ffffff]'
+                    : 'mc-button text-[#aaaaaa]'
                 }`}
               >
-                <PlusCircle className="w-4 h-4 text-teal-600" />
+                <PlusCircle className="w-4 h-4 text-[#55ff55]" />
                 <span>Add Spending</span>
               </button>
 
@@ -326,13 +328,13 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   onTabChange('history');
                   onClose();
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold transition font-pixel ${
                   currentTab === 'history'
-                    ? 'bg-slate-100 text-teal-800 font-extrabold'
-                    : 'text-slate-700 hover:bg-slate-50'
+                    ? 'mc-button mc-button-emerald text-[#ffffff]'
+                    : 'mc-button text-[#aaaaaa]'
                 }`}
               >
-                <History className="w-4 h-4 text-teal-600" />
+                <History className="w-4 h-4 text-[#55ffff]" />
                 <span>Spending History</span>
               </button>
 
@@ -342,13 +344,13 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   onTabChange('people');
                   onClose();
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold transition font-pixel ${
                   currentTab === 'people'
-                    ? 'bg-slate-100 text-teal-800 font-extrabold'
-                    : 'text-slate-700 hover:bg-slate-50'
+                    ? 'mc-button mc-button-emerald text-[#ffffff]'
+                    : 'mc-button text-[#aaaaaa]'
                 }`}
               >
-                <Users className="w-4 h-4 text-teal-600" />
+                <Users className="w-4 h-4 text-[#ffd700]" />
                 <span>Debts & IOUs</span>
               </button>
 
@@ -358,9 +360,9 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   onClose();
                   onOpenReports();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                className="mc-button w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-[#aaaaaa] transition cursor-pointer font-pixel"
               >
-                <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+                <FileSpreadsheet className="w-4 h-4 text-[#55ff55]" />
                 <span>Monthly Excel Statement</span>
               </button>
             </div>
@@ -368,14 +370,14 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
         </div>
 
         {/* Drawer Footer / Logout */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50">
+        <div className="p-4 border-t-2 border-[#120f0c] bg-[#1e1914]">
           <button
             type="button"
             onClick={async () => {
               await logout();
               onClose();
             }}
-            className="w-full py-2.5 px-4 bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            className="mc-button mc-button-redstone w-full py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
@@ -385,22 +387,22 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
 
       {/* Confirmation Dialog for Destructive Operations */}
       {confirmDialog && confirmDialog.open && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-3">
-            <h4 className="font-extrabold text-slate-900 text-base">{confirmDialog.title}</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">{confirmDialog.message}</p>
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70">
+          <div className="mc-panel max-w-sm w-full p-5 space-y-3">
+            <h4 className="font-pixel text-[#ffd700] text-base">{confirmDialog.title}</h4>
+            <p className="font-mc text-xs text-[#aaaaaa] leading-relaxed">{confirmDialog.message}</p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setConfirmDialog(null)}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                className="mc-button px-3 py-2 text-xs font-bold"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmDialog.action}
-                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold"
+                className="mc-button mc-button-emerald px-4 py-2 text-xs font-bold"
               >
                 Confirm
               </button>
