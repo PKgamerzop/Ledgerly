@@ -5,6 +5,10 @@ import {
   setGoogleAccessToken,
   signOutGoogle,
   initGoogleAuth,
+  isDriveLinkedOnDevice,
+  getStoredDriveToken,
+  ensureValidGoogleToken,
+  clearDriveAuthSession,
 } from '../services/googleAuth';
 import {
   syncVaultWithGoogleDrive,
@@ -33,6 +37,7 @@ interface AuthContextType {
   loading: boolean;
   isOffline: boolean;
   googleToken: string | null;
+  isDriveLinked: boolean;
   syncStatus: SyncStatus;
   lastSyncTimestamp: number | null;
   syncError: string | null;
@@ -40,7 +45,8 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   quickDemoLogin: () => Promise<void>;
-  syncNow: (forceDirection?: 'push' | 'pull') => Promise<void>;
+  syncNow: (forceDirection?: 'push' | 'pull', isInteractive?: boolean) => Promise<void>;
+  unlinkDrive: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -73,10 +79,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [googleToken, setGoogleTokenState] = useState<string | null>(null);
+  const [googleToken, setGoogleTokenState] = useState<string | null>(() => {
+    const stored = getStoredDriveToken();
+    return stored.token && !stored.isExpired ? stored.token : null;
+  });
+  const [isDriveLinked, setIsDriveLinked] = useState<boolean>(() => isDriveLinkedOnDevice());
   const [loading, setLoading] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('unlinked');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(() =>
+    isDriveLinkedOnDevice() ? 'idle' : 'unlinked'
+  );
   const [lastSyncTimestamp, setLastSyncTimestamp] = useState<number | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -92,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
-  // Online / Offline monitor
+  // Online / Offline monitor & Session Loading
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -120,6 +132,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    // Check if device is linked to Drive
+    if (isDriveLinkedOnDevice()) {
+      setIsDriveLinked(true);
+      const stored = getStoredDriveToken();
+      if (stored.token && !stored.isExpired) {
+        setGoogleTokenState(stored.token);
+        setSyncStatus('idle');
+      } else {
+        // Stored token is expired, but Drive is linked on device
+        // Attempt silent background renewal if available
+        ensureValidGoogleToken(false).then((freshToken) => {
+          if (freshToken) {
+            setGoogleTokenState(freshToken);
+            setSyncStatus('idle');
+          }
+        }).catch(() => {});
+      }
+    }
+
     setLoading(false);
 
     return () => {
@@ -134,44 +165,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (googleUser, token) => {
         if (token) {
           setGoogleTokenState(token);
+          setIsDriveLinked(true);
+          setSyncStatus('idle');
+        } else if (isDriveLinkedOnDevice()) {
+          setIsDriveLinked(true);
           setSyncStatus('idle');
         }
       },
       () => {
-        setGoogleTokenState(null);
-        setSyncStatus('unlinked');
+        if (!isDriveLinkedOnDevice()) {
+          setGoogleTokenState(null);
+          setIsDriveLinked(false);
+          setSyncStatus('unlinked');
+        }
       }
     );
     return unsubGoogle;
   }, []);
 
-  // Synchronize with Google Drive on demand
+  // Synchronize with Google Drive on demand (interactive by default)
   const syncNow = useCallback(
-    async (forceDirection?: 'push' | 'pull') => {
-      const token = googleToken || getGoogleAccessToken();
+    async (forceDirection?: 'push' | 'pull', isInteractive: boolean = true) => {
+      let token = googleToken || getGoogleAccessToken();
+
+      // If token missing or expired, attempt renewal if linked
+      if (!token && isDriveLinked) {
+        token = await ensureValidGoogleToken(isInteractive);
+        if (token) {
+          setGoogleTokenState(token);
+        }
+      }
+
+      // If still no token and user explicitly requested sync, request quick renewal
+      if (!token && isDriveLinked && isInteractive) {
+        try {
+          const res = await signInWithGoogleOAuth(false);
+          token = res.accessToken;
+          setGoogleTokenState(token);
+        } catch (e: any) {
+          if (e?.code === 'auth/popup-closed-by-user') {
+            return;
+          }
+          console.warn('Sync token acquisition notice:', e);
+        }
+      }
+
       if (!token || !user) {
         return;
       }
+
       try {
         await syncVaultWithGoogleDrive(token, user.uid, forceDirection);
-      } catch (err) {
+      } catch (err: any) {
+        // If expired during operation and interactive, retry once with fresh token
+        if (isInteractive && (err?.message?.includes('session expired') || err?.status === 401)) {
+          try {
+            const res = await signInWithGoogleOAuth(false);
+            token = res.accessToken;
+            setGoogleTokenState(token);
+            await syncVaultWithGoogleDrive(token, user.uid, forceDirection);
+            return;
+          } catch (retryErr) {
+            console.warn('Retry after token refresh failed:', retryErr);
+          }
+        }
         console.error('Manual sync failed:', err);
+        throw err;
       }
     },
-    [googleToken, user]
+    [googleToken, isDriveLinked, user]
   );
 
-  // Auto-sync debounce on data changes when logged in with Google
+  // Auto-sync on app startup if Drive is linked and user is loaded
+  useEffect(() => {
+    if (isDriveLinked && user && !user.isDemo) {
+      const token = googleToken || getGoogleAccessToken();
+      if (token) {
+        syncVaultWithGoogleDrive(token, user.uid).catch((err) => {
+          console.warn('Startup Drive sync notice:', err);
+        });
+      }
+    }
+  }, [isDriveLinked, user?.uid]);
+
+  // Auto-sync debounce on data changes when logged in with Google or Drive is linked
   useEffect(() => {
     const handleDataChanged = () => {
-      const token = googleToken || getGoogleAccessToken();
-      if (!token || !user || user.isDemo) return;
+      if (!isDriveLinked || !user || user.isDemo) return;
 
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
 
-      debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = setTimeout(async () => {
+        let token = googleToken || getGoogleAccessToken();
+        if (!token) {
+          token = await ensureValidGoogleToken(false);
+          if (token) setGoogleTokenState(token);
+        }
+        if (!token) return;
+
         syncVaultWithGoogleDrive(token, user.uid).catch((err) => {
           console.warn('Background Drive auto-sync error:', err);
         });
@@ -185,7 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [googleToken, user]);
+  }, [isDriveLinked, googleToken, user]);
 
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.toLowerCase().trim();
@@ -274,7 +367,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = async () => {
     try {
       localStorage.removeItem(DEMO_USER_KEY);
-      const { user: gUser, accessToken } = await signInWithGoogleOAuth();
+      const { user: gUser, accessToken } = await signInWithGoogleOAuth(false);
 
       const appUser: AppUser = {
         uid: gUser.uid,
@@ -286,8 +379,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setGoogleAccessToken(accessToken);
       setGoogleTokenState(accessToken);
+      setIsDriveLinked(true);
       localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(appUser));
       setUser(appUser);
+      setSyncStatus('idle');
 
       // Perform initial bidirectional sync with Google Drive
       try {
@@ -314,8 +409,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
     localStorage.removeItem(AUTH_SESSION_KEY);
-    setGoogleTokenState(null);
     setUser(demoUser);
+  };
+
+  const unlinkDrive = async () => {
+    try {
+      await signOutGoogle();
+    } catch (e) {
+      // ignore
+    }
+    clearDriveAuthSession();
+    setGoogleAccessToken(null);
+    setGoogleTokenState(null);
+    setIsDriveLinked(false);
     setSyncStatus('unlinked');
   };
 
@@ -325,8 +431,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       // ignore
     }
+    clearDriveAuthSession();
     setGoogleAccessToken(null);
     setGoogleTokenState(null);
+    setIsDriveLinked(false);
     localStorage.removeItem(AUTH_SESSION_KEY);
     localStorage.removeItem(DEMO_USER_KEY);
     setUser(null);
@@ -340,6 +448,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         isOffline,
         googleToken,
+        isDriveLinked,
         syncStatus,
         lastSyncTimestamp,
         syncError,
@@ -348,6 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         quickDemoLogin,
         syncNow,
+        unlinkDrive,
         logout,
       }}
     >

@@ -37,10 +37,12 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
     user,
     logout,
     googleToken,
+    isDriveLinked,
     syncStatus,
     lastSyncTimestamp,
     syncError,
     syncNow,
+    unlinkDrive,
     loginWithGoogle,
   } = useAuth();
   const { currency, setCurrency, currencyList } = useCurrency();
@@ -57,7 +59,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
   const handleManualSync = async (forceDirection?: 'push' | 'pull') => {
     try {
       setIsSyncing(true);
-      await syncNow(forceDirection);
+      await syncNow(forceDirection, true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -152,7 +154,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                 {user?.displayName || 'Steve'}
               </div>
               <div className="font-mc text-xs text-[#888888] truncate">{user?.email || 'Guest Mode'}</div>
-              {googleToken ? (
+              {isDriveLinked ? (
                 <span className="inline-flex items-center gap-1 font-pixel text-[10px] text-[#55ff55] bg-[#1b3d1b] border border-black px-2 py-0.5 mt-1">
                   Drive Linked
                 </span>
@@ -178,7 +180,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                 <Cloud className="w-4 h-4 text-[#55ffff]" />
                 Google Drive Sync
               </span>
-              {googleToken ? (
+              {isDriveLinked ? (
                 <span className="mc-badge bg-[#1b3d1b] text-[#55ff55] px-2 py-0.5 text-[10px]">
                   {syncStatus === 'syncing' || isSyncing ? 'Syncing...' : 'Connected'}
                 </span>
@@ -192,7 +194,7 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
               Google Drive file.
             </p>
 
-            {googleToken ? (
+            {isDriveLinked ? (
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between font-mc text-[11px] text-[#ffffff]">
                   <span>Last synced:</span>
@@ -247,6 +249,18 @@ export const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({
                   >
                     <Download className="w-3 h-3 text-[#55ffff]" />
                     <span>Restore</span>
+                  </button>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await unlinkDrive();
+                    }}
+                    className="font-mc text-[11px] text-[#888888] hover:text-[#ff6b6b] transition-colors cursor-pointer underline"
+                  >
+                    Disconnect Drive from this device
                   </button>
                 </div>
               </div>

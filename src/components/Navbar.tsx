@@ -31,6 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     logout,
     isOffline,
     googleToken,
+    isDriveLinked,
     syncStatus,
     syncNow,
   } = useAuth();
@@ -39,13 +40,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const handleSyncClick = async () => {
-    if (!googleToken) {
+    if (!isDriveLinked) {
       setMobileMenuOpen(true);
       return;
     }
     try {
       setIsSyncing(true);
-      await syncNow();
+      await syncNow(undefined, true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -130,12 +131,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Tools: Sync Button, Currency, Menu */}
           <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Google Drive Sync Pill */}
-            {googleToken ? (
+            {isDriveLinked ? (
               <button
                 type="button"
                 onClick={handleSyncClick}
                 disabled={isSyncing}
-                title={syncStatus === 'error' ? 'Sync notice - click to see details' : 'Sync with Google Drive'}
+                title={
+                  syncStatus === 'error'
+                    ? 'Sync notice - click to see details'
+                    : 'Google Drive Linked - Tap to sync now'
+                }
                 className={`mc-button text-[11px] sm:text-xs px-2.5 py-1.5 flex items-center gap-1.5 ${
                   syncStatus === 'error'
                     ? 'mc-button-redstone'
@@ -160,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
                 className="mc-button text-[11px] sm:text-xs px-2.5 py-1.5 flex items-center gap-1 text-[#4de1f4]"
-                title="Connect Google Drive to sync with PC"
+                title="Connect Google Drive to sync across devices"
               >
                 <Cloud className="w-3.5 h-3.5 text-[#4de1f4]" />
                 <span>Link Drive</span>

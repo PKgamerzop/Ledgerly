@@ -59,8 +59,100 @@ const provider = new GoogleAuthProvider();
 SCOPES.forEach((scope) => provider.addScope(scope));
 provider.setCustomParameters({ prompt: 'consent', access_type: 'offline' });
 
+export const STORAGE_KEYS = {
+  DRIVE_LINKED: 'ledgerly_drive_linked',
+  ACCESS_TOKEN: 'ledgerly_drive_access_token',
+  TOKEN_EXPIRES_AT: 'ledgerly_drive_token_expires_at',
+  USER: 'ledgerly_drive_user',
+};
+
 let cachedAccessToken: string | null = null;
 let cachedGoogleUser: { uid: string; email: string; displayName: string; photoURL?: string } | null = null;
+
+// Initialize from storage on module load
+try {
+  const savedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  const savedExpiresAt = parseInt(localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT) || '0', 10);
+  if (savedToken && Date.now() < savedExpiresAt - 30000) {
+    cachedAccessToken = savedToken;
+  }
+  const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
+  if (savedUser) {
+    cachedGoogleUser = JSON.parse(savedUser);
+  }
+} catch (e) {
+  // localStorage might be restricted
+}
+
+/**
+ * Check if the device is persistently linked to Google Drive
+ */
+export const isDriveLinkedOnDevice = (): boolean => {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.DRIVE_LINKED) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Get stored token information including expiry state
+ */
+export const getStoredDriveToken = (): {
+  token: string | null;
+  isExpired: boolean;
+  expiresAt: number;
+} => {
+  try {
+    const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const expiresAt = parseInt(localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRES_AT) || '0', 10);
+    const isExpired = !token || Date.now() >= expiresAt - 60000;
+    return { token, isExpired, expiresAt };
+  } catch {
+    return { token: null, isExpired: true, expiresAt: 0 };
+  }
+};
+
+/**
+ * Save persistent Drive authentication session to device
+ */
+export const saveDriveAuthSession = (
+  user: any,
+  token: string,
+  expiresInSecs: number = 3599
+) => {
+  const expiresAt = Date.now() + Math.max(expiresInSecs - 60, 300) * 1000;
+  try {
+    localStorage.setItem(STORAGE_KEYS.DRIVE_LINKED, 'true');
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES_AT, expiresAt.toString());
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    }
+  } catch (e) {
+    console.warn('Storage save notice:', e);
+  }
+  cachedAccessToken = token;
+  if (user) {
+    cachedGoogleUser = user;
+  }
+};
+
+/**
+ * Clear persistent Drive session (called on manual Sign Out / Unlink)
+ */
+export const clearDriveAuthSession = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.DRIVE_LINKED);
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRES_AT);
+    localStorage.removeItem(STORAGE_KEYS.USER);
+  } catch (e) {
+    // ignore
+  }
+  cachedAccessToken = null;
+  cachedGoogleUser = null;
+};
 
 // Listen to auth state
 export const initGoogleAuth = (
@@ -74,9 +166,9 @@ export const initGoogleAuth = (
       return onAuthStateChanged(authInstance, async (user: User | null) => {
         if (user) {
           if (onSuccess) onSuccess(user, cachedAccessToken);
-        } else if (cachedGoogleUser) {
+        } else if (cachedGoogleUser && isDriveLinkedOnDevice()) {
           if (onSuccess) onSuccess(cachedGoogleUser, cachedAccessToken);
-        } else {
+        } else if (!isDriveLinkedOnDevice()) {
           cachedAccessToken = null;
           if (onFailure) onFailure();
         }
@@ -86,9 +178,14 @@ export const initGoogleAuth = (
     }
   }
 
-  // If Firebase Auth is not active, fallback to cached state
-  if (cachedGoogleUser) {
-    if (onSuccess) onSuccess(cachedGoogleUser, cachedAccessToken);
+  // If Firebase Auth is not active, check if Drive is linked on device
+  if (isDriveLinkedOnDevice()) {
+    const userToReport = cachedGoogleUser || {
+      uid: 'google_linked_device_user',
+      email: 'drive_linked@google.com',
+      displayName: 'Google Drive User',
+    };
+    if (onSuccess) onSuccess(userToReport, cachedAccessToken);
   } else {
     if (onFailure) onFailure();
   }
@@ -97,10 +194,13 @@ export const initGoogleAuth = (
 };
 
 /**
- * Sign in using Google Identity Services (GSI) OAuth 2.0 token client
- * This communicates directly with accounts.google.com without requiring a Firebase API key
+ * Sign in or refresh token using Google Identity Services (GSI) OAuth 2.0 token client
+ * When prompt is '' (empty), skips consent screen if user previously consented.
  */
-async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken: string }> {
+async function signInWithGSI(
+  clientId: string,
+  forceConsent = false
+): Promise<{ user: any; accessToken: string }> {
   return new Promise((resolve, reject) => {
     const google = (window as any).google;
     if (!google?.accounts?.oauth2?.initTokenClient) {
@@ -110,10 +210,21 @@ async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken
     }
 
     try {
+      let userEmail = cachedGoogleUser?.email;
+      if (!userEmail) {
+        try {
+          const storedUserRaw = localStorage.getItem(STORAGE_KEYS.USER);
+          if (storedUserRaw) {
+            userEmail = JSON.parse(storedUserRaw)?.email;
+          }
+        } catch (e) {}
+      }
+
       const client = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES.join(' '),
-        prompt: 'consent',
+        prompt: forceConsent ? 'consent' : '',
+        hint: userEmail || undefined,
         callback: async (response: any) => {
           if (response.error) {
             if (response.error === 'popup_closed_by_user' || response.error === 'access_denied') {
@@ -129,7 +240,7 @@ async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken
           }
 
           const accessToken = response.access_token;
-          cachedAccessToken = accessToken;
+          const expiresIn = response.expires_in ? parseInt(response.expires_in, 10) : 3599;
 
           try {
             // Fetch basic profile info
@@ -139,22 +250,22 @@ async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken
             const profile = await userRes.json();
 
             const userInfo = {
-              uid: profile.sub || 'usr_g_' + Date.now(),
-              email: profile.email || 'google_user@gmail.com',
+              uid: profile.sub || cachedGoogleUser?.uid || 'usr_g_' + Date.now(),
+              email: profile.email || userEmail || 'google_user@gmail.com',
               displayName: profile.name || profile.email?.split('@')[0] || 'Google User',
               photoURL: profile.picture,
             };
 
-            cachedGoogleUser = userInfo;
+            saveDriveAuthSession(userInfo, accessToken, expiresIn);
             resolve({ user: userInfo, accessToken });
           } catch (profileErr) {
             // Fallback if profile request fails
-            const fallbackUser = {
+            const fallbackUser = cachedGoogleUser || {
               uid: 'usr_g_' + Date.now(),
-              email: 'google_user@gmail.com',
+              email: userEmail || 'google_user@gmail.com',
               displayName: 'Google Account',
             };
-            cachedGoogleUser = fallbackUser;
+            saveDriveAuthSession(fallbackUser, accessToken, expiresIn);
             resolve({ user: fallbackUser, accessToken });
           }
         },
@@ -167,8 +278,44 @@ async function signInWithGSI(clientId: string): Promise<{ user: any; accessToken
   });
 }
 
+/**
+ * Ensure a valid, non-expired Google OAuth token is available.
+ * If token is expired and device is linked, seamlessly refreshes token.
+ */
+export const ensureValidGoogleToken = async (interactive = false): Promise<string | null> => {
+  // 1. Check in-memory token
+  const stored = getStoredDriveToken();
+  if (cachedAccessToken && !stored.isExpired) {
+    return cachedAccessToken;
+  }
+
+  // 2. Check stored token in localStorage
+  if (stored.token && !stored.isExpired) {
+    cachedAccessToken = stored.token;
+    return stored.token;
+  }
+
+  // 3. Token is expired or missing. If device is linked, refresh it
+  if (isDriveLinkedOnDevice()) {
+    if (interactive && GOOGLE_OAUTH_CLIENT_ID && (window as any).google?.accounts?.oauth2) {
+      try {
+        const res = await signInWithGSI(GOOGLE_OAUTH_CLIENT_ID, false);
+        return res.accessToken;
+      } catch (err: any) {
+        if (err?.code === 'auth/popup-closed-by-user') {
+          return null;
+        }
+        console.warn('Google token renewal notice:', err);
+        return null;
+      }
+    }
+  }
+
+  return null;
+};
+
 // Sign in with Google (tries Firebase Auth if configured, otherwise uses direct GSI)
-export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken: string }> => {
+export const signInWithGoogleOAuth = async (forceConsent = false): Promise<{ user: any; accessToken: string }> => {
   const authInstance = getFirebaseAuth();
 
   // 1. If Firebase Auth is configured with an API key, attempt Firebase popup
@@ -179,8 +326,9 @@ export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken:
       if (!credential?.accessToken) {
         throw new Error('Google Sign-In completed, but no access token was returned.');
       }
-      cachedAccessToken = credential.accessToken;
-      return { user: result.user, accessToken: cachedAccessToken };
+      const accessToken = credential.accessToken;
+      saveDriveAuthSession(result.user, accessToken, 3599);
+      return { user: result.user, accessToken };
     } catch (error: any) {
       const errorCode = error?.code || '';
 
@@ -207,7 +355,7 @@ export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken:
         (window as any).google?.accounts?.oauth2
       ) {
         try {
-          const gsiResult = await signInWithGSI(GOOGLE_OAUTH_CLIENT_ID);
+          const gsiResult = await signInWithGSI(GOOGLE_OAUTH_CLIENT_ID, forceConsent);
           return gsiResult;
         } catch (gsiErr: any) {
           if (gsiErr?.code === 'auth/popup-closed-by-user') {
@@ -223,7 +371,7 @@ export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken:
 
   // 2. Direct GSI when Firebase Auth is not configured
   if (GOOGLE_OAUTH_CLIENT_ID && (window as any).google?.accounts?.oauth2) {
-    return await signInWithGSI(GOOGLE_OAUTH_CLIENT_ID);
+    return await signInWithGSI(GOOGLE_OAUTH_CLIENT_ID, forceConsent);
   }
 
   throw new Error(
@@ -232,11 +380,24 @@ export const signInWithGoogleOAuth = async (): Promise<{ user: any; accessToken:
 };
 
 export const getGoogleAccessToken = (): string | null => {
-  return cachedAccessToken;
+  const stored = getStoredDriveToken();
+  if (cachedAccessToken && !stored.isExpired) {
+    return cachedAccessToken;
+  }
+  if (stored.token && !stored.isExpired) {
+    cachedAccessToken = stored.token;
+    return stored.token;
+  }
+  return null;
 };
 
 export const setGoogleAccessToken = (token: string | null) => {
   cachedAccessToken = token;
+  if (token) {
+    saveDriveAuthSession(cachedGoogleUser, token, 3599);
+  } else {
+    clearDriveAuthSession();
+  }
 };
 
 export const signOutGoogle = async () => {
@@ -248,6 +409,5 @@ export const signOutGoogle = async () => {
       // ignore
     }
   }
-  cachedAccessToken = null;
-  cachedGoogleUser = null;
+  clearDriveAuthSession();
 };
