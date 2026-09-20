@@ -41,6 +41,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -79,8 +80,10 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
   const handleDelete = async () => {
     if (!user) return;
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${transaction.reason}"?`);
-    if (!confirmDelete) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
 
     try {
       setDeleting(true);
@@ -90,6 +93,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       console.error('Failed to delete transaction:', err);
       setErrorMessage('Failed to delete transaction.');
       setDeleting(false);
+      setConfirmingDelete(false);
     }
   };
 
@@ -215,16 +219,39 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-4 border-t-2 border-[#15120e]">
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting || submitting}
-              className="mc-button mc-button-redstone flex items-center gap-1.5 px-3 py-2 text-xs font-bold cursor-pointer"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete</span>
-            </button>
+          <div className="flex items-center justify-between pt-4 border-t-2 border-[#15120e] gap-2 flex-wrap">
+            {confirmingDelete ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="mc-button mc-button-redstone flex items-center gap-1.5 px-3 py-2 text-xs font-bold cursor-pointer text-[#ffffff]"
+                >
+                  <Trash2 className="w-4 h-4 text-[#ffffff]" />
+                  <span>{deleting ? 'Deleting...' : 'Confirm Delete?'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                  className="mc-button px-2.5 py-2 text-xs font-bold cursor-pointer text-[#a0a0a0]"
+                  title="Cancel delete"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting || submitting}
+                className="mc-button mc-button-redstone flex items-center gap-1.5 px-3 py-2 text-xs font-bold cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </button>
+            )}
 
             <div className="flex items-center gap-2">
               <button
@@ -232,11 +259,11 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                 onClick={onClose}
                 className="mc-button px-4 py-2 text-xs font-bold cursor-pointer"
               >
-                Cancel
+                Close
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || confirmingDelete}
                 className="mc-button mc-button-emerald flex items-center gap-1.5 px-4 py-2 text-xs font-bold cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4 text-[#55ff55]" />

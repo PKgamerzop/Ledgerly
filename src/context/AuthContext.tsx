@@ -15,6 +15,7 @@ import {
   subscribeSyncState,
   SyncStatus,
 } from '../services/googleDriveSync';
+import { LOCAL_EDIT_EVENT } from '../db/storage';
 
 export interface AppUser {
   uid: string;
@@ -135,20 +136,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if device is linked to Drive
     if (isDriveLinkedOnDevice()) {
       setIsDriveLinked(true);
+      setSyncStatus('idle');
       const stored = getStoredDriveToken();
-      if (stored.token && !stored.isExpired) {
+      if (stored.token) {
         setGoogleTokenState(stored.token);
-        setSyncStatus('idle');
-      } else {
-        // Stored token is expired, but Drive is linked on device
-        // Attempt silent background renewal if available
-        ensureValidGoogleToken(false).then((freshToken) => {
-          if (freshToken) {
-            setGoogleTokenState(freshToken);
-            setSyncStatus('idle');
-          }
-        }).catch(() => {});
       }
+      // Attempt silent background renewal if available
+      ensureValidGoogleToken(false).then((freshToken) => {
+        if (freshToken) {
+          setGoogleTokenState(freshToken);
+          setSyncStatus('idle');
+        }
+      }).catch(() => {});
     }
 
     setLoading(false);
@@ -271,9 +270,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, 1500);
     };
 
-    window.addEventListener('ledgerly_data_change', handleDataChanged);
+    window.addEventListener(LOCAL_EDIT_EVENT, handleDataChanged);
     return () => {
-      window.removeEventListener('ledgerly_data_change', handleDataChanged);
+      window.removeEventListener(LOCAL_EDIT_EVENT, handleDataChanged);
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }

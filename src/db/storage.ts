@@ -5,11 +5,91 @@ import { markLocalEdit } from '../services/googleDriveSync';
 const DEMO_TX_KEY = 'ledgerly_demo_transactions';
 const DEMO_PEOPLE_KEY = 'ledgerly_demo_people';
 const DEMO_ENTRIES_PREFIX = 'ledgerly_demo_entries_';
-const DATA_CHANGE_EVENT = 'ledgerly_data_change';
-const DEMO_CHANGE_EVENT = 'ledgerly_demo_data_change';
 
-function notifyDataChange() {
-  markLocalEdit();
+export const DATA_CHANGE_EVENT = 'ledgerly_data_change';
+export const LOCAL_EDIT_EVENT = 'ledgerly_local_edit';
+export const REMOTE_DATA_EVENT = 'ledgerly_remote_data_imported';
+export const DEMO_CHANGE_EVENT = 'ledgerly_demo_data_change';
+
+// Tombstones keys
+const DELETED_TX_KEY_PREFIX = 'ledgerly_deleted_tx_';
+const DELETED_PEOPLE_KEY_PREFIX = 'ledgerly_deleted_people_';
+const DELETED_ENTRIES_KEY_PREFIX = 'ledgerly_deleted_entries_';
+
+export function getDeletedTxIds(userId: string): string[] {
+  try {
+    const raw = localStorage.getItem(`${DELETED_TX_KEY_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordDeletedTxId(userId: string, txId: string): void {
+  const current = getDeletedTxIds(userId);
+  if (!current.includes(txId)) {
+    current.push(txId);
+    if (current.length > 500) current.shift();
+    localStorage.setItem(`${DELETED_TX_KEY_PREFIX}${userId}`, JSON.stringify(current));
+  }
+}
+
+export function saveDeletedTxIds(userId: string, ids: string[]): void {
+  const set = new Set([...getDeletedTxIds(userId), ...ids]);
+  localStorage.setItem(`${DELETED_TX_KEY_PREFIX}${userId}`, JSON.stringify(Array.from(set).slice(-500)));
+}
+
+export function getDeletedPersonIds(userId: string): string[] {
+  try {
+    const raw = localStorage.getItem(`${DELETED_PEOPLE_KEY_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordDeletedPersonId(userId: string, personId: string): void {
+  const current = getDeletedPersonIds(userId);
+  if (!current.includes(personId)) {
+    current.push(personId);
+    if (current.length > 200) current.shift();
+    localStorage.setItem(`${DELETED_PEOPLE_KEY_PREFIX}${userId}`, JSON.stringify(current));
+  }
+}
+
+export function saveDeletedPersonIds(userId: string, ids: string[]): void {
+  const set = new Set([...getDeletedPersonIds(userId), ...ids]);
+  localStorage.setItem(`${DELETED_PEOPLE_KEY_PREFIX}${userId}`, JSON.stringify(Array.from(set).slice(-200)));
+}
+
+export function getDeletedEntryIds(userId: string): string[] {
+  try {
+    const raw = localStorage.getItem(`${DELETED_ENTRIES_KEY_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordDeletedEntryId(userId: string, entryId: string): void {
+  const current = getDeletedEntryIds(userId);
+  if (!current.includes(entryId)) {
+    current.push(entryId);
+    if (current.length > 500) current.shift();
+    localStorage.setItem(`${DELETED_ENTRIES_KEY_PREFIX}${userId}`, JSON.stringify(current));
+  }
+}
+
+export function saveDeletedEntryIds(userId: string, ids: string[]): void {
+  const set = new Set([...getDeletedEntryIds(userId), ...ids]);
+  localStorage.setItem(`${DELETED_ENTRIES_KEY_PREFIX}${userId}`, JSON.stringify(Array.from(set).slice(-500)));
+}
+
+function notifyDataChange(isLocal = true) {
+  if (isLocal) {
+    markLocalEdit();
+    window.dispatchEvent(new CustomEvent(LOCAL_EDIT_EVENT));
+  }
   window.dispatchEvent(new CustomEvent(DATA_CHANGE_EVENT));
   window.dispatchEvent(new CustomEvent(DEMO_CHANGE_EVENT));
 }
@@ -183,6 +263,10 @@ export function subscribeTransactions(
       list = userId.startsWith('demo-') ? getInitialDemoTransactions() : [];
       localStorage.setItem(key, JSON.stringify(list));
     }
+    const deletedIds = new Set(getDeletedTxIds(userId));
+    if (deletedIds.size > 0) {
+      list = list.filter((t) => !deletedIds.has(t.id));
+    }
     list.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
     callback(list, true);
   };
@@ -191,11 +275,15 @@ export function subscribeTransactions(
 
   const handleSync = () => loadTransactions();
   window.addEventListener(DATA_CHANGE_EVENT, handleSync);
+  window.addEventListener(LOCAL_EDIT_EVENT, handleSync);
+  window.addEventListener(REMOTE_DATA_EVENT, handleSync);
   window.addEventListener(DEMO_CHANGE_EVENT, handleSync);
   window.addEventListener('storage', handleSync);
 
   return () => {
     window.removeEventListener(DATA_CHANGE_EVENT, handleSync);
+    window.removeEventListener(LOCAL_EDIT_EVENT, handleSync);
+    window.removeEventListener(REMOTE_DATA_EVENT, handleSync);
     window.removeEventListener(DEMO_CHANGE_EVENT, handleSync);
     window.removeEventListener('storage', handleSync);
   };
@@ -238,7 +326,7 @@ export async function addTransaction(
 
   list.unshift(newTx);
   localStorage.setItem(key, JSON.stringify(list));
-  notifyDataChange();
+  notifyDataChange(true);
   return newId;
 }
 
@@ -261,7 +349,7 @@ export async function updateTransaction(
       updatedAt: Date.now(),
     };
     localStorage.setItem(key, JSON.stringify(list));
-    notifyDataChange();
+    notifyDataChange(true);
   }
 }
 
@@ -271,7 +359,10 @@ export async function deleteTransaction(userId: string, transactionId: string): 
   const list: SpendingTransaction[] = stored ? JSON.parse(stored) : [];
   const filtered = list.filter((t) => t.id !== transactionId);
   localStorage.setItem(key, JSON.stringify(filtered));
-  notifyDataChange();
+  
+  // Record tombstone so Drive sync will permanently delete this across devices
+  recordDeletedTxId(userId, transactionId);
+  notifyDataChange(true);
 }
 
 // ================= PEOPLE & DEBTS =================
@@ -295,6 +386,10 @@ export function subscribePeople(
       list = userId.startsWith('demo-') ? getInitialDemoPeople() : [];
       localStorage.setItem(key, JSON.stringify(list));
     }
+    const deletedIds = new Set(getDeletedPersonIds(userId));
+    if (deletedIds.size > 0) {
+      list = list.filter((p) => !deletedIds.has(p.id));
+    }
     list.sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
     callback(list, true);
   };
@@ -303,11 +398,15 @@ export function subscribePeople(
 
   const handleSync = () => loadPeople();
   window.addEventListener(DATA_CHANGE_EVENT, handleSync);
+  window.addEventListener(LOCAL_EDIT_EVENT, handleSync);
+  window.addEventListener(REMOTE_DATA_EVENT, handleSync);
   window.addEventListener(DEMO_CHANGE_EVENT, handleSync);
   window.addEventListener('storage', handleSync);
 
   return () => {
     window.removeEventListener(DATA_CHANGE_EVENT, handleSync);
+    window.removeEventListener(LOCAL_EDIT_EVENT, handleSync);
+    window.removeEventListener(REMOTE_DATA_EVENT, handleSync);
     window.removeEventListener(DEMO_CHANGE_EVENT, handleSync);
     window.removeEventListener('storage', handleSync);
   };
@@ -376,7 +475,7 @@ export async function addPerson(
     localStorage.setItem(entriesKey, JSON.stringify(entries));
   }
 
-  notifyDataChange();
+  notifyDataChange(true);
   return newPersonId;
 }
 
@@ -390,7 +489,8 @@ export async function deletePerson(userId: string, personId: string): Promise<vo
   const entriesKey = getEntriesKey(userId, personId);
   localStorage.removeItem(entriesKey);
 
-  notifyDataChange();
+  recordDeletedPersonId(userId, personId);
+  notifyDataChange(true);
 }
 
 export async function cleanUpSettledPeople(userId: string): Promise<number> {
@@ -402,10 +502,11 @@ export async function cleanUpSettledPeople(userId: string): Promise<number> {
 
   settled.forEach((p) => {
     localStorage.removeItem(getEntriesKey(userId, p.id));
+    recordDeletedPersonId(userId, p.id);
   });
 
   localStorage.setItem(peopleKey, JSON.stringify(remaining));
-  notifyDataChange();
+  notifyDataChange(true);
   return settled.length;
 }
 
@@ -431,6 +532,10 @@ export function subscribePersonEntries(
       list = userId.startsWith('demo-') ? getInitialDemoEntries(personId) : [];
       localStorage.setItem(entriesKey, JSON.stringify(list));
     }
+    const deletedEntryIds = new Set(getDeletedEntryIds(userId));
+    if (deletedEntryIds.size > 0) {
+      list = list.filter((e) => !deletedEntryIds.has(e.id));
+    }
     list.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
     callback(list);
   };
@@ -439,11 +544,15 @@ export function subscribePersonEntries(
 
   const handleSync = () => loadEntries();
   window.addEventListener(DATA_CHANGE_EVENT, handleSync);
+  window.addEventListener(LOCAL_EDIT_EVENT, handleSync);
+  window.addEventListener(REMOTE_DATA_EVENT, handleSync);
   window.addEventListener(DEMO_CHANGE_EVENT, handleSync);
   window.addEventListener('storage', handleSync);
 
   return () => {
     window.removeEventListener(DATA_CHANGE_EVENT, handleSync);
+    window.removeEventListener(LOCAL_EDIT_EVENT, handleSync);
+    window.removeEventListener(REMOTE_DATA_EVENT, handleSync);
     window.removeEventListener(DEMO_CHANGE_EVENT, handleSync);
     window.removeEventListener('storage', handleSync);
   };
@@ -521,7 +630,7 @@ export async function addLedgerEntry(
     await deletePerson(userId, personId);
     personRemoved = true;
   } else {
-    notifyDataChange();
+    notifyDataChange(true);
   }
 
   return { entryId: newEntryId, personRemoved };
@@ -566,5 +675,7 @@ export async function deleteLedgerEntry(
   const entries: LedgerEntry[] = storedEntries ? JSON.parse(storedEntries) : [];
   const filtered = entries.filter((e) => e.id !== entryId);
   localStorage.setItem(entriesKey, JSON.stringify(filtered));
-  notifyDataChange();
+
+  recordDeletedEntryId(userId, entryId);
+  notifyDataChange(true);
 }

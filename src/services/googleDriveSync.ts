@@ -1,4 +1,14 @@
 import { SpendingTransaction, Person, LedgerEntry } from '../types';
+import {
+  getDeletedTxIds,
+  saveDeletedTxIds,
+  getDeletedPersonIds,
+  saveDeletedPersonIds,
+  getDeletedEntryIds,
+  saveDeletedEntryIds,
+  DATA_CHANGE_EVENT,
+  REMOTE_DATA_EVENT,
+} from '../db/storage';
 
 export const VAULT_FILE_NAME = 'ledgerly_personal_vault.json';
 
@@ -9,6 +19,9 @@ export interface VaultPayload {
   transactions: SpendingTransaction[];
   people: Person[];
   ledgerEntries: Record<string, LedgerEntry[]>;
+  deletedTxIds?: string[];
+  deletedPersonIds?: string[];
+  deletedEntryIds?: string[];
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'unlinked';
@@ -83,6 +96,9 @@ export function exportLocalVault(userId: string): VaultPayload {
     transactions,
     people,
     ledgerEntries,
+    deletedTxIds: getDeletedTxIds(userId),
+    deletedPersonIds: getDeletedPersonIds(userId),
+    deletedEntryIds: getDeletedEntryIds(userId),
   };
 }
 
@@ -93,17 +109,44 @@ export function importRemoteVault(payload: VaultPayload, userId: string) {
   const txKey = userId.startsWith('demo-') ? 'ledgerly_demo_transactions' : `ledgerly_tx_${userId}`;
   const peopleKey = userId.startsWith('demo-') ? 'ledgerly_demo_people' : `ledgerly_people_${userId}`;
 
+  // 1. Save tombstones first
+  if (payload.deletedTxIds && payload.deletedTxIds.length > 0) {
+    saveDeletedTxIds(userId, payload.deletedTxIds);
+  }
+  if (payload.deletedPersonIds && payload.deletedPersonIds.length > 0) {
+    saveDeletedPersonIds(userId, payload.deletedPersonIds);
+  }
+  if (payload.deletedEntryIds && payload.deletedEntryIds.length > 0) {
+    saveDeletedEntryIds(userId, payload.deletedEntryIds);
+  }
+
+  const deletedTxSet = new Set(getDeletedTxIds(userId));
+  const validTransactions = (payload.transactions || []).filter((t) => !deletedTxSet.has(t.id));
+
+  const deletedPersonSet = new Set(getDeletedPersonIds(userId));
+  const validPeople = (payload.people || []).filter((p) => !deletedPersonSet.has(p.id));
+
   // Save transactions & people
-  localStorage.setItem(txKey, JSON.stringify(payload.transactions || []));
-  localStorage.setItem(peopleKey, JSON.stringify(payload.people || []));
+  localStorage.setItem(txKey, JSON.stringify(validTransactions));
+  localStorage.setItem(peopleKey, JSON.stringify(validPeople));
 
   // Save ledger entries
+  const deletedEntrySet = new Set(getDeletedEntryIds(userId));
   if (payload.ledgerEntries) {
     Object.entries(payload.ledgerEntries).forEach(([personId, entries]) => {
+      if (deletedPersonSet.has(personId)) {
+        localStorage.removeItem(
+          userId.startsWith('demo-')
+            ? `ledgerly_demo_entries_${personId}`
+            : `ledgerly_entries_${userId}_${personId}`
+        );
+        return;
+      }
       const entryKey = userId.startsWith('demo-')
         ? `ledgerly_demo_entries_${personId}`
         : `ledgerly_entries_${userId}_${personId}`;
-      localStorage.setItem(entryKey, JSON.stringify(entries || []));
+      const validEntries = (entries || []).filter((e) => !deletedEntrySet.has(e.id));
+      localStorage.setItem(entryKey, JSON.stringify(validEntries));
     });
   }
 
@@ -112,26 +155,50 @@ export function importRemoteVault(payload: VaultPayload, userId: string) {
     localStorage.setItem(LAST_LOCAL_EDIT_KEY, String(payload.lastModified));
   }
 
-  // Trigger UI updates
-  window.dispatchEvent(new CustomEvent('ledgerly_data_change'));
+  // Trigger UI updates (REMOTE event + DATA event, NOT local edit event)
+  window.dispatchEvent(new CustomEvent(REMOTE_DATA_EVENT));
+  window.dispatchEvent(new CustomEvent(DATA_CHANGE_EVENT));
 }
 
 /**
  * Merge local and remote payloads without dropping either device's records.
- * Resolves by record ID union.
+ * Resolves by record ID union, while strictly honoring deletion tombstones.
  */
 function mergeVaults(local: VaultPayload, remote: VaultPayload, userId: string): VaultPayload {
-  // 1. Merge transactions by ID
+  // Collect all deleted IDs across both local and remote
+  const allDeletedTxIds = new Set([
+    ...(local.deletedTxIds || []),
+    ...(remote.deletedTxIds || []),
+    ...getDeletedTxIds(userId),
+  ]);
+  const allDeletedPersonIds = new Set([
+    ...(local.deletedPersonIds || []),
+    ...(remote.deletedPersonIds || []),
+    ...getDeletedPersonIds(userId),
+  ]);
+  const allDeletedEntryIds = new Set([
+    ...(local.deletedEntryIds || []),
+    ...(remote.deletedEntryIds || []),
+    ...getDeletedEntryIds(userId),
+  ]);
+
+  // 1. Merge transactions by ID (excluding any deleted transactions)
   const txMap = new Map<string, SpendingTransaction>();
-  (remote.transactions || []).forEach((t) => txMap.set(t.id, t));
-  (local.transactions || []).forEach((t) => {
-    if (!txMap.has(t.id)) {
+  (remote.transactions || []).forEach((t) => {
+    if (!allDeletedTxIds.has(t.id)) {
       txMap.set(t.id, t);
-    } else {
-      const existing = txMap.get(t.id)!;
-      // Prefer newer record if timestamps exist
-      if ((t.createdAt || 0) >= (existing.createdAt || 0)) {
+    }
+  });
+  (local.transactions || []).forEach((t) => {
+    if (!allDeletedTxIds.has(t.id)) {
+      if (!txMap.has(t.id)) {
         txMap.set(t.id, t);
+      } else {
+        const existing = txMap.get(t.id)!;
+        // Prefer newer record if timestamps exist
+        if ((t.createdAt || 0) >= (existing.createdAt || 0)) {
+          txMap.set(t.id, t);
+        }
       }
     }
   });
@@ -139,27 +206,33 @@ function mergeVaults(local: VaultPayload, remote: VaultPayload, userId: string):
     (a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0)
   );
 
-  // 2. Merge people by ID or Name
+  // 2. Merge people by ID or Name (excluding any deleted people)
   const peopleMap = new Map<string, Person>();
-  (remote.people || []).forEach((p) => peopleMap.set(p.id, p));
-  (local.people || []).forEach((p) => {
-    const existing = Array.from(peopleMap.values()).find(
-      (ep) => ep.id === p.id || ep.name.toLowerCase() === p.name.toLowerCase()
-    );
-    if (!existing) {
+  (remote.people || []).forEach((p) => {
+    if (!allDeletedPersonIds.has(p.id)) {
       peopleMap.set(p.id, p);
-    } else {
-      // Merge balances
-      peopleMap.set(existing.id, {
-        ...existing,
-        ...p,
-        balance: p.balance !== undefined ? p.balance : existing.balance,
-      });
+    }
+  });
+  (local.people || []).forEach((p) => {
+    if (!allDeletedPersonIds.has(p.id)) {
+      const existing = Array.from(peopleMap.values()).find(
+        (ep) => ep.id === p.id || ep.name.toLowerCase() === p.name.toLowerCase()
+      );
+      if (!existing) {
+        peopleMap.set(p.id, p);
+      } else {
+        // Merge balances
+        peopleMap.set(existing.id, {
+          ...existing,
+          ...p,
+          balance: p.balance !== undefined ? p.balance : existing.balance,
+        });
+      }
     }
   });
   const mergedPeople = Array.from(peopleMap.values());
 
-  // 3. Merge ledger entries per person by ID
+  // 3. Merge ledger entries per person by ID (excluding deleted entries)
   const mergedLedgerEntries: Record<string, LedgerEntry[]> = {};
   const allPersonIds = new Set([
     ...Object.keys(remote.ledgerEntries || {}),
@@ -167,9 +240,18 @@ function mergeVaults(local: VaultPayload, remote: VaultPayload, userId: string):
   ]);
 
   allPersonIds.forEach((pId) => {
+    if (allDeletedPersonIds.has(pId)) return;
     const entryMap = new Map<string, LedgerEntry>();
-    ((remote.ledgerEntries && remote.ledgerEntries[pId]) || []).forEach((e) => entryMap.set(e.id, e));
-    ((local.ledgerEntries && local.ledgerEntries[pId]) || []).forEach((e) => entryMap.set(e.id, e));
+    ((remote.ledgerEntries && remote.ledgerEntries[pId]) || []).forEach((e) => {
+      if (!allDeletedEntryIds.has(e.id)) {
+        entryMap.set(e.id, e);
+      }
+    });
+    ((local.ledgerEntries && local.ledgerEntries[pId]) || []).forEach((e) => {
+      if (!allDeletedEntryIds.has(e.id)) {
+        entryMap.set(e.id, e);
+      }
+    });
     mergedLedgerEntries[pId] = Array.from(entryMap.values()).sort(
       (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
     );
@@ -184,6 +266,9 @@ function mergeVaults(local: VaultPayload, remote: VaultPayload, userId: string):
     transactions: mergedTransactions,
     people: mergedPeople,
     ledgerEntries: mergedLedgerEntries,
+    deletedTxIds: Array.from(allDeletedTxIds),
+    deletedPersonIds: Array.from(allDeletedPersonIds),
+    deletedEntryIds: Array.from(allDeletedEntryIds),
   };
 }
 

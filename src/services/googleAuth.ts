@@ -297,17 +297,29 @@ export const ensureValidGoogleToken = async (interactive = false): Promise<strin
 
   // 3. Token is expired or missing. If device is linked, refresh it
   if (isDriveLinkedOnDevice()) {
-    if (interactive && GOOGLE_OAUTH_CLIENT_ID && (window as any).google?.accounts?.oauth2) {
+    if (GOOGLE_OAUTH_CLIENT_ID && (window as any).google?.accounts?.oauth2) {
       try {
         const res = await signInWithGSI(GOOGLE_OAUTH_CLIENT_ID, false);
-        return res.accessToken;
+        if (res?.accessToken) {
+          cachedAccessToken = res.accessToken;
+          return res.accessToken;
+        }
       } catch (err: any) {
+        if (!interactive) {
+          // In background mode, fallback to existing token if present
+          if (stored.token) return stored.token;
+          return null;
+        }
         if (err?.code === 'auth/popup-closed-by-user') {
           return null;
         }
         console.warn('Google token renewal notice:', err);
-        return null;
       }
+    }
+
+    // Fallback to stored token even if past estimated expiry
+    if (stored.token) {
+      return stored.token;
     }
   }
 
