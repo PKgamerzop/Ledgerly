@@ -1,21 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { useCurrency } from '../context/CurrencyContext';
-import { SpendingTransaction, TimeGrouping, TransactionType } from '../types';
+import { SpendingTransaction, TimeGrouping } from '../types';
 import { formatCurrency, formatDateDisplay, exportTransactionsToExcel } from '../utils/formatters';
 import { EditTransactionModal } from './EditTransactionModal';
 import {
   Calendar,
-  Filter,
   Search,
   Download,
   Edit3,
-  CalendarDays,
-  CreditCard,
   Inbox,
-  ArrowUpDown,
   TrendingUp,
   TrendingDown,
-  ArrowDownLeft,
+  Plus,
+  BookOpen,
+  FileText,
+  DollarSign,
 } from 'lucide-react';
 
 interface SpendingHistoryViewProps {
@@ -74,13 +73,13 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
   // Grouped transactions
   const groupedData = useMemo(() => {
     if (grouping === 'all') {
-      return [{ groupTitle: 'All Transactions', items: filteredTransactions }];
+      return [{ groupTitle: 'Complete General Register', items: filteredTransactions }];
     }
 
     const groups: { [key: string]: SpendingTransaction[] } = {};
 
     filteredTransactions.forEach((t) => {
-      const [year, month, day] = t.date.split('-');
+      const [year, month] = t.date.split('-');
       let key = '';
 
       if (grouping === 'day') {
@@ -89,7 +88,7 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
         const d = new Date(Number(year), Number(month) - 1, 1);
         key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       } else if (grouping === 'year') {
-        key = year;
+        key = `Year of ${year}`;
       }
 
       if (!groups[key]) groups[key] = [];
@@ -102,7 +101,7 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
     }));
   }, [filteredTransactions, grouping]);
 
-  // Total metrics: received amounts are subtracted from spent amounts
+  // Total metrics
   const netTotalAmount = useMemo(() => {
     return filteredTransactions.reduce(
       (sum, t) => sum + (t.type === 'received' ? -t.amount : t.amount),
@@ -130,295 +129,315 @@ export const SpendingHistoryView: React.FC<SpendingHistoryViewProps> = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 sm:py-10">
-      {/* Top Banner & Title */}
+      {/* Top Banner & Title (The Vintage Bookkeeper Style) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="font-pixel text-2xl sm:text-3xl text-[#ffffff] tracking-wide drop-shadow-[2px_2px_0_#000]">
-            Spending History
+          <div className="inline-flex items-center gap-2 bg-[#f4ede1] border border-[#d8c7b0] text-[#6b4028] px-3.5 py-1 rounded-full text-xs font-serif mb-2 shadow-xs">
+            <BookOpen className="w-3.5 h-3.5 text-[#85261c]" />
+            <span className="font-semibold tracking-wide">General Ledger &bull; Folio Archive</span>
+          </div>
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#24140a] tracking-tight">
+            General Ledger &amp; Cash Book
           </h2>
-          <p className="font-mc text-xs sm:text-sm text-[#a0a0a0] mt-1">
-            Browse, filter, edit, or export recorded expenses and received income.
+          <p className="text-xs text-[#6e5340] mt-1 font-serif italic">
+            Chronological accounting ledger with classic red ink deductions and green ink receipts.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action Buttons: Add New & Export Excel */}
+        <div className="flex items-center gap-2.5">
           <button
-            id="btn-export-excel-history"
+            id="btn-history-export-excel"
             onClick={handleExport}
             disabled={filteredTransactions.length === 0}
-            className="mc-button mc-button-emerald flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold cursor-pointer disabled:opacity-40"
-            title="Download formatted Excel workbook"
+            className="font-serif px-3.5 py-2 rounded-xl text-xs font-bold bg-[#eff7f1] border border-[#b9deb4] text-[#265c3b] hover:bg-[#e4f2e8] transition cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Download formatted Excel ledger statement"
           >
-            <Download className="w-4 h-4" />
-            <span>Export to Excel</span>
+            <Download className="w-3.5 h-3.5 text-[#265c3b]" />
+            <span>Export Statement (.xlsx)</span>
+          </button>
+
+          <button
+            id="btn-history-add-new"
+            onClick={onAddNew}
+            className="btn-leather font-serif px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5 text-[#fbf5eb]" />
+            <span>+ Record Entry</span>
           </button>
         </div>
       </div>
 
-      {/* Summary Stat Cards (Net Total Spend, Total Spent, Total Received) */}
+      {/* Bookkeeper Metric Summary Grid (Parchment & Accounting Ink) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
-        {/* Card 1: Net Total Spend (Spent minus Received) */}
-        <div className="mc-panel p-4">
-          <div className="flex items-center justify-between text-[#a0a0a0] mb-1">
-            <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
-              Net Total Spend
+        {/* Net Spend Metric */}
+        <div className="vintage-card p-4">
+          <div className="flex items-center justify-between text-xs text-[#6e5340] mb-1 font-serif font-bold uppercase tracking-wider">
+            <span>Net Expenditure</span>
+            <span className="text-[10px] text-[#8c7361] bg-[#f4ede1] px-1.5 py-0.2 rounded border border-[#dfd1bd]">
+              Filtered
             </span>
-            <CreditCard className="w-4 h-4 text-[#ffd700]" />
           </div>
-          <div
-            className={`font-pixel text-xl sm:text-2xl ${
-              netTotalAmount < 0 ? 'text-[#55ff55]' : 'text-[#ff5555]'
-            }`}
-          >
+          <div className="text-2xl sm:text-3xl font-serif font-bold tabular-nums text-[#24140a]">
             {formatCurrency(netTotalAmount, currency)}
           </div>
-          <div className="font-mc text-[10px] text-[#888888] mt-1">
-            Spent: {formatCurrency(totalSpent, currency)} | Recv: -{formatCurrency(totalReceived, currency)}
+          <div className="text-[11px] text-[#7d6350] mt-1 font-serif italic">
+            Debits less credits ({filteredTransactions.length} entries)
           </div>
         </div>
 
-        {/* Card 2: Total Spent (Expenses) */}
-        <div className="mc-panel p-4">
-          <div className="flex items-center justify-between text-[#a0a0a0] mb-1">
-            <span className="font-pixel text-xs text-[#ff7777] uppercase tracking-wider">
-              Total Spent
+        {/* Total Spent Metric (Red Ink) */}
+        <div className="vintage-card p-4 border-l-4 border-l-[#a63428]">
+          <div className="flex items-center justify-between text-xs text-[#a63428] mb-1 font-serif font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1">
+              <TrendingDown className="w-3.5 h-3.5" />
+              <span>Total Debits (Red Ink)</span>
             </span>
-            <TrendingDown className="w-4 h-4 text-[#ff5555]" />
           </div>
-          <div className="font-pixel text-xl sm:text-2xl text-[#ff5555]">
+          <div className="text-2xl sm:text-3xl font-serif font-bold tabular-nums text-[#a63428]">
             {formatCurrency(totalSpent, currency)}
           </div>
-          <div className="font-mc text-[10px] text-[#888888] mt-1">
-            {filteredTransactions.filter((t) => t.type !== 'received').length} expense item(s)
+          <div className="text-[11px] text-[#8c7361] mt-1 font-serif italic">
+            Total expenses &amp; disbursements
           </div>
         </div>
 
-        {/* Card 3: Total Received (Subtracted) */}
-        <div className="mc-panel p-4">
-          <div className="flex items-center justify-between text-[#a0a0a0] mb-1">
-            <span className="font-pixel text-xs text-[#55ff55] uppercase tracking-wider">
-              Total Received
+        {/* Total Received Metric (Green Ink) */}
+        <div className="vintage-card p-4 border-l-4 border-l-[#265c3b]">
+          <div className="flex items-center justify-between text-xs text-[#265c3b] mb-1 font-serif font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Total Credits (Green Ink)</span>
             </span>
-            <TrendingUp className="w-4 h-4 text-[#55ff55]" />
           </div>
-          <div className="font-pixel text-xl sm:text-2xl text-[#55ff55]">
-            +{formatCurrency(totalReceived, currency)}
+          <div className="text-2xl sm:text-3xl font-serif font-bold tabular-nums text-[#265c3b]">
+            {formatCurrency(totalReceived, currency)}
           </div>
-          <div className="font-mc text-[10px] text-[#55ff55]/80 mt-1">
-            Subtracted from total spend
+          <div className="text-[11px] text-[#8c7361] mt-1 font-serif italic">
+            Income &amp; incoming receipts
           </div>
         </div>
       </div>
 
-      {/* Control Bar: Grouping Tabs, Search, Filters & Sorting */}
-      <div className="mc-panel p-4 mb-6 space-y-3">
-        {/* Group by Day, Month, and Year */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Parchment Filter Controls */}
+      <div className="vintage-card p-4 mb-6 space-y-3.5">
+        {/* Search Bar & Type Segment */}
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="sm:col-span-7 relative">
+            <Search className="w-4 h-4 text-[#8c7361] absolute left-3.5 top-3" />
+            <input
+              id="history-search-input"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search ledger entries, notes, or dates..."
+              className="w-full pl-10 pr-4 py-2 text-xs bg-[#ffffff] border border-[#cfbeaa] rounded-xl text-[#24140a] placeholder:text-[#a89584] focus:border-[#6b4028] focus:ring-1 focus:ring-[#6b4028]/20 outline-none transition shadow-2xs"
+            />
+          </div>
+
+          {/* Type Filter Pills: All / Debits / Credits */}
+          <div className="sm:col-span-5 flex items-center bg-[#f4ede1] p-1 rounded-xl border border-[#dfd1bd]">
+            <button
+              id="filter-type-all"
+              type="button"
+              onClick={() => setTypeFilter('all')}
+              className={`flex-1 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif ${
+                typeFilter === 'all'
+                  ? 'bg-[#ffffff] text-[#2c1810] font-bold shadow-xs border border-[#cfbeaa]'
+                  : 'text-[#6e5340] hover:text-[#24140a]'
+              }`}
+            >
+              All Folios
+            </button>
+            <button
+              id="filter-type-spent"
+              type="button"
+              onClick={() => setTypeFilter('spent')}
+              className={`flex-1 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif ${
+                typeFilter === 'spent'
+                  ? 'bg-[#fbf0ee] text-[#a63428] font-bold shadow-xs border border-[#e8b6b0]'
+                  : 'text-[#6e5340] hover:text-[#a63428]'
+              }`}
+            >
+              Debits (Red)
+            </button>
+            <button
+              id="filter-type-received"
+              type="button"
+              onClick={() => setTypeFilter('received')}
+              className={`flex-1 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif ${
+                typeFilter === 'received'
+                  ? 'bg-[#eff7f1] text-[#265c3b] font-bold shadow-xs border border-[#b9deb4]'
+                  : 'text-[#6e5340] hover:text-[#265c3b]'
+              }`}
+            >
+              Credits (Green)
+            </button>
+          </div>
+        </div>
+
+        {/* Secondary Filters: Grouping, Category, and Sort */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-[#dfd1bd] text-xs">
+          {/* Time Grouping */}
           <div className="flex items-center gap-1.5">
-            <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider mr-1">
-              Group by:
-            </span>
+            <span className="text-[#7d6350] font-serif font-semibold text-[11px]">View by:</span>
             {(['all', 'day', 'month', 'year'] as TimeGrouping[]).map((g) => (
               <button
                 key={g}
-                id={`btn-group-${g}`}
+                type="button"
                 onClick={() => setGrouping(g)}
-                className={`mc-button text-[11px] px-2.5 py-1 uppercase font-bold cursor-pointer ${
-                  grouping === g ? 'mc-button-emerald' : ''
+                className={`px-2.5 py-1 rounded-lg text-xs font-serif transition cursor-pointer border ${
+                  grouping === g
+                    ? 'bg-[#2c1810] text-[#fbf5eb] border-[#2c1810] font-bold shadow-2xs'
+                    : 'bg-[#ffffff] text-[#6e5340] border-[#d8c7b0] hover:bg-[#faf4ea]'
                 }`}
               >
-                {g}
+                {g === 'all' ? 'All' : g === 'day' ? 'Daybook' : g === 'month' ? 'Monthly' : 'Annual'}
               </button>
             ))}
           </div>
 
-          {/* Sort order */}
-          <div className="flex items-center gap-1.5">
-            <ArrowUpDown className="w-3.5 h-3.5 text-[#888888]" />
+          {/* Category & Sort Dropdowns */}
+          <div className="flex items-center gap-2">
             <select
+              id="history-category-select"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="py-1 px-2.5 bg-[#ffffff] border border-[#cfbeaa] text-[#2c1810] rounded-xl text-xs font-serif focus:outline-none focus:border-[#6b4028] cursor-pointer shadow-2xs"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
+              id="history-sort-select"
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest')}
-              className="mc-input text-xs font-bold py-1.5 px-2.5 text-[#ffffff] cursor-pointer"
+              onChange={(e) => setSortOrder(e.target.value as any)}
+              className="py-1 px-2.5 bg-[#ffffff] border border-[#cfbeaa] text-[#2c1810] rounded-xl text-xs font-serif focus:outline-none focus:border-[#6b4028] cursor-pointer shadow-2xs"
             >
-              <option value="newest" className="bg-[#25201b]">Date: Newest First</option>
-              <option value="oldest" className="bg-[#25201b]">Date: Oldest First</option>
-              <option value="highest" className="bg-[#25201b]">Amount: High to Low</option>
-              <option value="lowest" className="bg-[#25201b]">Amount: Low to High</option>
+              <option value="newest">Sort: Newest Date</option>
+              <option value="oldest">Sort: Oldest Date</option>
+              <option value="highest">Sort: Highest Amount</option>
+              <option value="lowest">Sort: Lowest Amount</option>
             </select>
           </div>
-        </div>
-
-        {/* Search, Type Filter & Category filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2 border-t-2 border-[#15120e]">
-          <div className="relative w-full sm:flex-1">
-            <Search className="w-4 h-4 text-[#888888] absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search reason, note, or date (YYYY-MM)..."
-              className="mc-input w-full pl-9 pr-3 py-2 text-xs text-[#ffffff] placeholder:text-[#666666]"
-            />
-          </div>
-
-          {/* Type filter (All, Spent, Received) */}
-          <div className="flex items-center gap-1 w-full sm:w-auto">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'spent' | 'received')}
-              className="mc-input w-full sm:w-auto text-xs font-bold px-2.5 py-2 text-[#ffffff] cursor-pointer"
-            >
-              <option value="all" className="bg-[#25201b]">All Types</option>
-              <option value="spent" className="bg-[#25201b]">Spent Only</option>
-              <option value="received" className="bg-[#25201b]">Received Only</option>
-            </select>
-          </div>
-
-          {categories.length > 0 && (
-            <div className="flex items-center gap-1 w-full sm:w-auto">
-              <Filter className="w-3.5 h-3.5 text-[#888888]" />
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="mc-input w-full sm:w-auto text-xs font-bold px-3 py-2 text-[#ffffff] cursor-pointer"
-              >
-                <option value="all" className="bg-[#25201b]">All Categories</option>
-                {categories.map((c) => (
-                  <option key={c} value={c} className="bg-[#25201b]">
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="mc-panel p-4 animate-pulse flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="h-4 w-32 bg-[#332b24]"></div>
-                <div className="h-3 w-20 bg-[#28211a]"></div>
-              </div>
-              <div className="h-6 w-16 bg-[#332b24]"></div>
-            </div>
-          ))}
+      {/* Transaction List / Ledger Table */}
+      {loading ? (
+        <div className="py-16 text-center text-xs text-[#7d6350] font-serif">
+          <div className="w-8 h-8 border-2 border-[#6b4028]/30 border-t-[#6b4028] rounded-full animate-spin mx-auto mb-3" />
+          <span className="italic">Reviewing accounting ledger archives...</span>
         </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && filteredTransactions.length === 0 && (
-        <div className="mc-panel p-10 text-center">
-          <div className="w-16 h-16 bg-[#161310] border-2 border-black text-[#ffaa00] flex items-center justify-center mx-auto mb-4">
-            <Inbox className="w-8 h-8" />
-          </div>
-          <h3 className="font-pixel text-lg text-[#ffffff]">No Transactions Found</h3>
-          <p className="font-mc text-xs text-[#888888] max-w-sm mx-auto mt-1 mb-6">
-            {searchQuery || categoryFilter !== 'all' || typeFilter !== 'all'
-              ? 'No spending or received records match your search filters. Try clearing filters.'
-              : 'You haven’t recorded any transactions yet. Start logging your expenses or received amounts!'}
+      ) : filteredTransactions.length === 0 ? (
+        <div className="vintage-card p-12 text-center">
+          <Inbox className="w-10 h-10 text-[#a89584] mx-auto mb-3" />
+          <h3 className="font-serif text-base font-bold text-[#24140a]">
+            No Matching Journal Records Found
+          </h3>
+          <p className="text-xs text-[#6e5340] mt-1 max-w-sm mx-auto font-serif italic">
+            Try adjusting your search query, filter criteria, or date periods.
           </p>
-          <button
-            onClick={onAddNew}
-            className="mc-button mc-button-emerald inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold cursor-pointer"
-          >
-            Record New Item
-          </button>
         </div>
-      )}
-
-      {/* Grouped Transactions List */}
-      {!loading && filteredTransactions.length > 0 && (
+      ) : (
         <div className="space-y-6">
-          {groupedData.map(({ groupTitle, items }) => {
-            // Group subtotal: received amounts subtract
-            const groupSubtotal = items.reduce(
-              (sum, item) => sum + (item.type === 'received' ? -item.amount : item.amount),
-              0
-            );
-
-            return (
-              <div key={groupTitle} className="mc-panel overflow-hidden">
-                {/* Group Header */}
-                <div className="bg-[#1e1914] px-4 py-3 border-b-2 border-[#120e0a] flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#55ff55]" />
-                    <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
-                      {groupTitle}
-                    </span>
-                    <span className="font-mc text-[11px] text-[#888888]">
-                      ({items.length})
-                    </span>
-                  </div>
-                  <span
-                    className={`font-pixel text-xs ${
-                      groupSubtotal < 0 ? 'text-[#55ff55]' : 'text-[#ff5555]'
-                    }`}
-                  >
-                    Net Subtotal: {formatCurrency(groupSubtotal, currency)}
+          {groupedData.map((group) => (
+            <div
+              key={group.groupTitle}
+              className="vintage-card overflow-hidden"
+            >
+              {/* Folio Group Header */}
+              <div className="bg-[#f4ede1] px-5 py-3 border-b border-[#dfd1bd] flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-[#85261c]" />
+                  <span className="font-serif font-bold text-[#2c1810] tracking-wide text-sm">
+                    {group.groupTitle}
+                  </span>
+                  <span className="text-[11px] text-[#7d6350] font-serif italic">
+                    ({group.items.length} {group.items.length === 1 ? 'entry' : 'entries'})
                   </span>
                 </div>
-
-                {/* Group Items */}
-                <div className="divide-y-2 divide-[#16120e]">
-                  {items.map((item) => {
-                    const isReceived = item.type === 'received';
-                    return (
-                      <div
-                        key={item.id}
-                        className="p-4 flex items-center justify-between hover:bg-[#2e2721] transition group"
-                      >
-                        <div className="flex flex-col pr-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-[#ffffff] text-sm">
-                              {item.reason}
-                            </span>
-                            <span
-                              className={`font-pixel text-[9px] px-1.5 py-0.5 border ${
-                                isReceived
-                                  ? 'bg-[#1b3d1b] text-[#55ff55] border-[#2e7d32]'
-                                  : 'bg-[#3d1b1b] text-[#ff7777] border-[#8b2525]'
-                              }`}
-                            >
-                              {isReceived ? 'Received' : 'Spent'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-[#888888] mt-1 font-mc">
-                            <span>{formatDateDisplay(item.date)}</span>
-                            <span>•</span>
-                            <span className="mc-badge bg-[#1c1813] text-[#a0a0a0] px-2 py-0.5 text-[10px]">
-                              {item.category || 'General'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`font-pixel text-base ${
-                              isReceived ? 'text-[#55ff55]' : 'text-[#ff5555]'
-                            }`}
-                          >
-                            {isReceived ? '+' : '-'}{formatCurrency(item.amount, currency)}
-                          </span>
-                          <button
-                            onClick={() => setEditingTransaction(item)}
-                            className="mc-button p-2 cursor-pointer text-[#ffd700]"
-                            title="Edit or Delete transaction"
-                            aria-label="Edit or delete transaction"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="text-right font-serif">
+                  <span className="text-[#7d6350] text-[11px] mr-1.5 uppercase tracking-wider font-semibold">Subtotal:</span>
+                  <span className="font-bold tabular-nums text-[#2c1810] text-sm accounting-double-rule">
+                    {formatCurrency(
+                      group.items.reduce(
+                        (acc, t) => acc + (t.type === 'received' ? -t.amount : t.amount),
+                        0
+                      ),
+                      currency
+                    )}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Group Item Rows (Ruled Accounting Paper) */}
+              <div className="divide-y divide-[#ebdcc8]">
+                {group.items.map((t) => {
+                  const isReceived = t.type === 'received';
+                  return (
+                    <div
+                      key={t.id}
+                      className="px-5 py-3.5 flex items-center justify-between hover:bg-[#faf4ea] transition group"
+                    >
+                      {/* Left: Date, Type pill, Reason, Category */}
+                      <div className="flex items-center gap-3.5 min-w-0 pr-4">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[10px] font-serif font-bold px-2 py-0.5 rounded border ${
+                                isReceived
+                                  ? 'bg-[#eff7f1] text-[#265c3b] border-[#b9deb4]'
+                                  : 'bg-[#fbf0ee] text-[#a63428] border-[#e8b6b0]'
+                              }`}
+                            >
+                              {isReceived ? 'Credit' : 'Debit'}
+                            </span>
+                            <span className="font-serif font-bold text-[#24140a] text-sm truncate">
+                              {t.reason}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-[#7d6350] mt-0.5 font-serif italic">
+                            <span>{t.date}</span>
+                            <span>&bull;</span>
+                            <span>{t.category || 'General'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Tabular Decimal Aligned Amount + Edit button */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right font-serif">
+                          <div
+                            className={`text-base sm:text-lg font-bold tabular-nums tracking-tight ${
+                              isReceived ? 'text-[#265c3b]' : 'text-[#a63428]'
+                            }`}
+                          >
+                            {isReceived ? '+' : '-'}
+                            {formatCurrency(t.amount, currency)}
+                          </div>
+                        </div>
+
+                        <button
+                          id={`btn-edit-tx-${t.id}`}
+                          onClick={() => setEditingTransaction(t)}
+                          className="p-1.5 rounded-lg bg-[#ffffff] border border-[#cfbeaa] text-[#7d6350] hover:text-[#2c1810] hover:border-[#6b4028] transition cursor-pointer shadow-2xs"
+                          title="Amend or void journal entry"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

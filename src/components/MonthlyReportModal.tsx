@@ -2,17 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { SpendingTransaction } from '../types';
-import { exportTransactionsToExcel, formatCurrency, formatDateDisplay } from '../utils/formatters';
+import { exportTransactionsToExcel, formatCurrency } from '../utils/formatters';
 import {
   X,
   FileSpreadsheet,
   Download,
   Calendar,
   Mail,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
   Code2,
+  BookOpen,
 } from 'lucide-react';
 
 interface MonthlyReportModalProps {
@@ -71,68 +69,75 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
-      <div className="mc-panel max-w-2xl w-full my-auto overflow-hidden flex flex-col max-h-[92vh] p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1f100a]/65 backdrop-blur-xs overflow-y-auto">
+      <div className="vintage-card max-w-2xl w-full my-auto overflow-hidden flex flex-col max-h-[92vh] relative">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#85261c] via-[#c59b27] to-[#265c3b]"></div>
+
         {/* Modal Header */}
-        <div className="bg-[#1c1814] border-b-2 border-[#120f0c] text-white p-6 relative">
+        <div className="bg-[#f4ede1] border-b border-[#dfd1bd] p-5 sm:p-6 relative">
           <button
             onClick={onClose}
-            className="mc-button absolute right-4 top-4 p-1 cursor-pointer"
+            className="p-1.5 rounded-xl text-[#7d6350] hover:text-[#24140a] hover:bg-[#ede2ce] transition absolute right-5 top-5 cursor-pointer border border-[#cfbeaa]"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#120f0c] border-2 border-black flex items-center justify-center shadow-[inset_1px_1px_0_#2a231d,inset_-1px_-1px_0_#0a0806]">
-              <FileSpreadsheet className="w-6 h-6 text-[#55ff55]" />
+          <div className="flex items-center gap-3.5 pr-8">
+            <div className="w-12 h-12 rounded-xl bg-[#ffffff] border border-[#cfbeaa] text-[#265c3b] flex items-center justify-center shadow-2xs">
+              <FileSpreadsheet className="w-6 h-6 text-[#265c3b]" />
             </div>
             <div>
-              <h3 className="font-pixel text-xl sm:text-2xl text-[#ffd700] drop-shadow-[2px_2px_0_#000]">
-                Monthly Excel Report
-              </h3>
-              <p className="font-mc text-xs text-[#a0a0a0] mt-0.5">
-                Generate, preview, and download monthly statements (.xlsx)
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif text-lg sm:text-xl font-bold text-[#24140a]">
+                  Monthly Ledger Statement
+                </h3>
+                <span className="font-serif text-[11px] text-[#265c3b] bg-[#eff7f1] px-2 py-0.5 rounded border border-[#b9deb4]">
+                  .XLSX Format
+                </span>
+              </div>
+              <p className="text-xs text-[#6e5340] mt-0.5 font-serif italic">
+                Generate and export complete double-entry statements for accounting review
               </p>
             </div>
           </div>
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 overflow-y-auto space-y-6 bg-[#2b2520]">
-          {/* Automated Notice */}
-          <div className="mc-panel bg-[#1a281a] border-2 border-[#0f1f0f] p-4 text-xs text-[#aaffaa] flex items-start gap-3">
-            <Mail className="w-5 h-5 text-[#55ff55] shrink-0 mt-0.5" />
-            <div className="space-y-1 font-mc">
-              <span className="font-pixel text-xs text-[#55ff55] block">
-                Instant Download & Automated Delivery:
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+          {/* Notice */}
+          <div className="bg-[#f4ede1] border border-[#dfd1bd] rounded-2xl p-4 text-xs text-[#594132] flex items-start gap-3">
+            <Mail className="w-4 h-4 text-[#85261c] shrink-0 mt-0.5" />
+            <div className="space-y-1 font-serif">
+              <span className="text-xs font-bold text-[#2c1810] block">
+                On-Demand Statement &amp; Monthly Dispatch
               </span>
-              <p className="text-[#a0cca0] leading-relaxed text-[11px]">
-                You can download your full monthly Excel statement anytime below with one click. For automated cloud delivery, a scheduled serverless function can be configured to run on the last day of each month and send reports directly to <strong className="text-[#ffffff]">{user?.email || 'your registered email'}</strong>.
+              <p className="text-[#6e5340] text-[11px] leading-relaxed italic">
+                Export your ledger statement anytime below. For automatic delivery on the last day of each month, an archival script can compile statements and deliver them to <span className="text-[#24140a] font-bold not-italic">{user?.email || 'your account email'}</span>.
               </p>
               <button
                 type="button"
                 onClick={() => setShowCodeDetails(!showCodeDetails)}
-                className="text-[#55ffff] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer pt-1"
+                className="text-[#6b4028] hover:text-[#24140a] font-bold inline-flex items-center gap-1 cursor-pointer pt-1 text-[11px]"
               >
                 <Code2 className="w-3.5 h-3.5" />
-                {showCodeDetails ? 'Hide Function Code' : 'View Scheduled Delivery Script'}
+                <span>{showCodeDetails ? 'Hide Automation Source' : 'View Scheduled Cron Script'}</span>
               </button>
             </div>
           </div>
 
           {/* Cloud Function Code Accordion */}
           {showCodeDetails && (
-            <div className="bg-[#161310] text-[#55ff55] p-4 text-[11px] font-mono overflow-x-auto space-y-2 border-2 border-black">
-              <div className="text-[#888888] font-mc font-semibold text-xs pb-1 border-b border-[#2b2520] flex items-center justify-between">
-                <span>scripts/monthlyReport.js (Scheduled Cron Script)</span>
-                <span className="text-[#ffd700]">Scheduled: Last day of month</span>
+            <div className="bg-[#ffffff] text-[#3a2016] p-4 text-[11px] font-mono rounded-xl overflow-x-auto space-y-2 border border-[#cfbeaa]">
+              <div className="text-[#6e5340] font-bold text-xs pb-1 border-b border-[#dfd1bd] flex items-center justify-between font-serif">
+                <span>scripts/monthlyReport.js (Scheduled Dispatch Cron)</span>
+                <span className="text-[#a63428]">CRON: 59 23 L * *</span>
               </div>
-              <pre className="text-[#55ffff] leading-relaxed">
+              <pre className="text-[#4a2c1d] leading-relaxed">
 {`// Automated Monthly Statement Generator
 const XLSX = require("xlsx");
 const nodemailer = require("nodemailer");
 
-// Runs at 23:59 on the last day of every month
+// Runs at 23:59 on the last day of every calendar month
 async function sendMonthlyReport(userEmail, transactions) {
   // Query monthly transactions, format worksheet & email statement
 }`}
@@ -141,34 +146,34 @@ async function sendMonthlyReport(userEmail, transactions) {
           )}
 
           {/* Month Selector & Instant Excel Generator */}
-          <div className="mc-panel p-4 sm:p-5 space-y-4">
+          <div className="bg-[#ffffff] border border-[#cfbeaa] rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-1">
-                  Select Month to Export
+                <label className="block text-xs font-serif font-bold text-[#594132] uppercase tracking-wider mb-1.5">
+                  Statement Period
                 </label>
                 <div className="relative">
-                  <Calendar className="w-4 h-4 text-[#888888] absolute left-3 top-2.5" />
+                  <Calendar className="w-4 h-4 text-[#8c7361] absolute left-3 top-2.5" />
                   <input
                     type="month"
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="mc-input pl-9 pr-3 py-1.5 text-xs text-[#ffffff]"
+                    className="pl-9 pr-3 py-1.5 text-xs font-serif bg-[#f7f3eb] border border-[#cfbeaa] rounded-xl text-[#24140a] focus:border-[#6b4028] outline-none transition"
                   />
                 </div>
               </div>
 
-              <div className="text-right">
-                <span className="font-mc text-xs text-[#888888] block">Net Total for {monthLabel}</span>
+              <div className="text-right font-serif">
+                <span className="text-[11px] text-[#7d6350] block font-bold uppercase tracking-wider">Net Statement Total</span>
                 <span
-                  className={`font-pixel text-xl sm:text-2xl ${
-                    totalMonthSpend < 0 ? 'text-[#55ff55]' : 'text-[#ffd700]'
+                  className={`text-xl sm:text-2xl font-bold tabular-nums ${
+                    totalMonthSpend < 0 ? 'text-[#265c3b]' : 'text-[#24140a]'
                   }`}
                 >
                   {formatCurrency(totalMonthSpend, currency)}
                 </span>
-                <span className="font-mc text-[10px] text-[#888888] block mt-0.5">
-                  Spent: {formatCurrency(monthSpent, currency)} | Recv: -{formatCurrency(monthReceived, currency)}
+                <span className="text-[11px] text-[#7d6350] block mt-0.5 italic">
+                  Debits: {formatCurrency(monthSpent, currency)} | Credits: -{formatCurrency(monthReceived, currency)}
                 </span>
               </div>
             </div>
@@ -178,58 +183,58 @@ async function sendMonthlyReport(userEmail, transactions) {
               id="btn-download-excel-file"
               onClick={handleDownload}
               disabled={monthTransactions.length === 0}
-              className="mc-button mc-button-emerald w-full flex items-center justify-center gap-2 py-3 px-4 font-bold text-xs sm:text-sm cursor-pointer disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 font-serif font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer btn-green-ink disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 text-white" />
               <span>Download {monthLabel} Statement (.xlsx)</span>
             </button>
           </div>
 
           {/* Spreadsheet Preview */}
           <div>
-            <h4 className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
-              Report Spreadsheet Preview ({monthTransactions.length} records)
+            <h4 className="text-xs font-serif font-bold text-[#594132] uppercase tracking-wider mb-2.5">
+              Statement Data Preview ({monthTransactions.length} entries)
             </h4>
 
             {monthTransactions.length === 0 ? (
-              <div className="text-center py-8 font-mc text-xs text-[#888888] mc-panel">
-                No spending transactions recorded for {monthLabel}.
+              <div className="text-center py-8 text-xs text-[#7d6350] bg-[#f4ede1] border border-[#dfd1bd] rounded-xl font-serif italic">
+                No ledger records found for {monthLabel}.
               </div>
             ) : (
-              <div className="border-2 border-black overflow-hidden bg-[#161310]">
+              <div className="border border-[#cfbeaa] rounded-2xl overflow-hidden bg-[#ffffff] shadow-2xs">
                 <div className="max-h-60 overflow-y-auto">
-                  <table className="w-full text-left text-xs font-mc">
-                    <thead className="bg-[#1e1914] text-[#ffd700] font-pixel sticky top-0 border-b-2 border-black">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#f4ede1] text-[#4a2c1d] font-serif font-bold sticky top-0 border-b border-[#dfd1bd]">
                       <tr>
-                        <th className="py-2 px-3">Date</th>
-                        <th className="py-2 px-3">Type</th>
-                        <th className="py-2 px-3">Reason</th>
-                        <th className="py-2 px-3">Category</th>
-                        <th className="py-2 px-3 text-right">Amount</th>
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Type</th>
+                        <th className="py-2.5 px-3">Description</th>
+                        <th className="py-2.5 px-3">Category</th>
+                        <th className="py-2.5 px-3 text-right">Amount</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#26201b]">
+                    <tbody className="divide-y divide-[#ebdcc8]">
                       {monthTransactions.map((t) => {
                         const isReceived = t.type === 'received';
                         return (
-                          <tr key={t.id} className="hover:bg-[#201b16]">
-                            <td className="py-2 px-3 font-mono text-[#aaaaaa]">{t.date}</td>
+                          <tr key={t.id} className="hover:bg-[#faf4ea]">
+                            <td className="py-2 px-3 text-[#7d6350] font-serif italic">{t.date}</td>
                             <td className="py-2 px-3">
                               <span
-                                className={`font-pixel text-[9px] px-1.5 py-0.5 border ${
+                                className={`text-[10px] font-serif font-bold px-1.5 py-0.2 rounded border ${
                                   isReceived
-                                    ? 'bg-[#1b3d1b] text-[#55ff55] border-[#2e7d32]'
-                                    : 'bg-[#3d1b1b] text-[#ff7777] border-[#8b2525]'
+                                    ? 'bg-[#eff7f1] text-[#265c3b] border-[#b9deb4]'
+                                    : 'bg-[#fbf0ee] text-[#a63428] border-[#e8b6b0]'
                                 }`}
                               >
-                                {isReceived ? 'Received' : 'Spent'}
+                                {isReceived ? 'Credit' : 'Debit'}
                               </span>
                             </td>
-                            <td className="py-2 px-3 font-bold text-[#ffffff]">{t.reason}</td>
-                            <td className="py-2 px-3 text-[#888888]">{t.category || 'General'}</td>
+                            <td className="py-2 px-3 font-serif font-bold text-[#24140a]">{t.reason}</td>
+                            <td className="py-2 px-3 text-[#6e5340] font-serif">{t.category || 'General'}</td>
                             <td
-                              className={`py-2 px-3 text-right font-pixel ${
-                                isReceived ? 'text-[#55ff55]' : 'text-[#ff5555]'
+                              className={`py-2 px-3 text-right font-serif font-bold tabular-nums ${
+                                isReceived ? 'text-[#265c3b]' : 'text-[#a63428]'
                               }`}
                             >
                               {isReceived ? '+' : '-'}{formatCurrency(t.amount, currency)}
@@ -238,14 +243,14 @@ async function sendMonthlyReport(userEmail, transactions) {
                         );
                       })}
                     </tbody>
-                    <tfoot className="bg-[#1e1914] border-t-2 border-black font-pixel text-[#ffffff]">
+                    <tfoot className="bg-[#f4ede1] border-t border-[#dfd1bd] font-serif font-bold text-[#24140a]">
                       <tr>
-                        <td className="py-2.5 px-3 font-bold text-[#ffd700]" colSpan={4}>
-                          Net Total Monthly Spend
+                        <td className="py-2.5 px-3 text-[#594132]" colSpan={4}>
+                          Net Monthly Balance
                         </td>
                         <td
-                          className={`py-2.5 px-3 text-right font-pixel text-sm ${
-                            totalMonthSpend < 0 ? 'text-[#55ff55]' : 'text-[#ff5555]'
+                          className={`py-2.5 px-3 text-right text-sm tabular-nums accounting-double-rule ${
+                            totalMonthSpend < 0 ? 'text-[#265c3b]' : 'text-[#24140a]'
                           }`}
                         >
                           {formatCurrency(totalMonthSpend, currency)}
@@ -260,13 +265,13 @@ async function sendMonthlyReport(userEmail, transactions) {
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t-2 border-[#15120e] bg-[#1e1914] flex items-center justify-end">
+        <div className="px-6 py-4 border-t border-[#dfd1bd] bg-[#f4ede1] flex items-center justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="mc-button px-4 py-2 text-xs font-bold cursor-pointer"
+            className="px-5 py-2 text-xs font-serif font-bold rounded-xl border border-[#cfbeaa] bg-[#ffffff] hover:bg-[#ede2ce] text-[#2c1810] cursor-pointer transition shadow-2xs"
           >
-            Close
+            Close Statement
           </button>
         </div>
       </div>

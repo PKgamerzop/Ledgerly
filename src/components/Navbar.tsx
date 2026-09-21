@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useCurrency } from '../context/CurrencyContext';
-import { NavigationTab } from '../types';
-import { MobileMenuDrawer } from './MobileMenuDrawer';
-import {
-  PlusCircle,
-  History,
-  Users,
-  FileSpreadsheet,
-  LogOut,
-  WifiOff,
-  Cloud,
-  RefreshCw,
-  Menu,
-} from 'lucide-react';
+ import { useCurrency } from '../context/CurrencyContext';
+ import { NavigationTab } from '../types';
+ import { MobileMenuDrawer } from './MobileMenuDrawer';
+ import {
+   PlusCircle,
+   History,
+   Users,
+   FileSpreadsheet,
+   LogOut,
+   WifiOff,
+   Cloud,
+   RefreshCw,
+   Menu,
+   Terminal,
+ } from 'lucide-react';
 
 interface NavbarProps {
   currentTab: NavigationTab;
@@ -30,7 +31,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     user,
     logout,
     isOffline,
-    googleToken,
     isDriveLinked,
     syncStatus,
     syncNow,
@@ -56,81 +56,87 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#25201b] border-b-4 border-[#100d0a] shadow-lg">
+      <header className="sticky top-0 z-40 bg-[#2c1810] text-[#fbf5eb] border-b border-[#44281b] shadow-[0_4px_16px_rgba(44,24,16,0.3)]">
         <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between">
-          {/* Brand Logo & Name */}
+          {/* Brand Logo & Name (Vintage Bookkeeper Style) */}
           <div
             onClick={() => onTabChange('add')}
             className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 p-1 bg-[#171411] border-2 border-black shadow-[inset_1px_1px_0_#4a423a,inset_-1px_-1px_0_#080605] flex items-center justify-center group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#805333] group-hover:border-[#d4af37] transition-all shadow-md flex items-center justify-center bg-[#28130a]">
               <img
                 src="/logo.svg"
-                alt="Ledgerly Logo"
-                className="w-full h-full object-contain"
+                alt="Ledgerly"
+                className="w-full h-full object-cover"
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-pixel text-base sm:text-lg text-[#55ff55] tracking-wider drop-shadow-[2px_2px_0px_#000]">
-                LEDGERLY
-              </span>
-              <span className="font-mc text-[11px] text-[#ffaa00] uppercase font-bold tracking-wider hidden sm:block">
-                ★ Spending & Debts
+              <div className="flex items-center gap-2">
+                <span className="font-serif text-lg sm:text-xl font-bold tracking-tight text-[#fbf5eb]">
+                  LEDGERLY
+                </span>
+                <span className="hidden sm:inline font-serif text-[10px] text-[#e0c48e] bg-[#3e2317] border border-[#6b422a] px-1.5 py-0.2 rounded font-medium tracking-wide">
+                  FOLIO 1926
+                </span>
+              </div>
+              <span className="text-[10px] text-[#cbb69e] hidden sm:flex items-center gap-1.5 font-serif italic">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#c59b27]"></span>
+                <span>The Bookkeeper&apos;s Accounting Journal</span>
               </span>
             </div>
           </div>
 
-          {/* Desktop Navigation Links (Minecraft Hotbar Style Tabs) */}
-          <nav className="hidden md:flex items-center gap-1.5 bg-[#171411] p-1.5 border-2 border-black shadow-[inset_2px_2px_0_#0a0806,inset_-2px_-2px_0_#38322a]">
+          {/* Desktop Navigation Links (Vintage Leather & Paper Folio Tabs) */}
+          <nav className="hidden md:flex items-center gap-1 bg-[#20100a] p-1 rounded-xl border border-[#44281b]">
             <button
               id="nav-tab-add"
               onClick={() => onTabChange('add')}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif ${
                 currentTab === 'add'
-                  ? 'mc-button mc-button-emerald'
-                  : 'mc-button'
+                  ? 'bg-[#fcf9f2] text-[#2c1810] shadow-[0_2px_6px_rgba(0,0,0,0.3)] font-bold'
+                  : 'text-[#d6c2a8] hover:text-[#ffffff] hover:bg-[#341b12]'
               }`}
             >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>Add Spending</span>
+              <PlusCircle className={`w-3.5 h-3.5 ${currentTab === 'add' ? 'text-[#85261c]' : 'text-[#c59b27]'}`} />
+              <span>Record Entry</span>
             </button>
             <button
               id="nav-tab-history"
               onClick={() => onTabChange('history')}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif ${
                 currentTab === 'history'
-                  ? 'mc-button mc-button-emerald'
-                  : 'mc-button'
+                  ? 'bg-[#fcf9f2] text-[#2c1810] shadow-[0_2px_6px_rgba(0,0,0,0.3)] font-bold'
+                  : 'text-[#d6c2a8] hover:text-[#ffffff] hover:bg-[#341b12]'
               }`}
             >
-              <History className="w-3.5 h-3.5" />
-              <span>History</span>
+              <History className={`w-3.5 h-3.5 ${currentTab === 'history' ? 'text-[#2c1810]' : 'text-[#c59b27]'}`} />
+              <span>General Ledger</span>
             </button>
             <button
               id="nav-tab-people"
               onClick={() => onTabChange('people')}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif ${
                 currentTab === 'people'
-                  ? 'mc-button mc-button-emerald'
-                  : 'mc-button'
+                  ? 'bg-[#fcf9f2] text-[#2c1810] shadow-[0_2px_6px_rgba(0,0,0,0.3)] font-bold'
+                  : 'text-[#d6c2a8] hover:text-[#ffffff] hover:bg-[#341b12]'
               }`}
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>People (Debts)</span>
+              <Users className={`w-3.5 h-3.5 ${currentTab === 'people' ? 'text-[#2c1810]' : 'text-[#c59b27]'}`} />
+              <span>Counterparties</span>
             </button>
             <button
               id="nav-tab-reports"
               onClick={onOpenReports}
-              className="mc-button mc-button-diamond flex items-center gap-2 px-3 py-1.5 text-xs font-bold transition cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-lg transition cursor-pointer font-serif text-[#d9bf8f] hover:text-[#fbf5eb] hover:bg-[#341b12]"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-[#55ffff]" />
-              <span>Excel Report</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#265c3b]" />
+              <span>Monthly Statement</span>
             </button>
           </nav>
 
           {/* Right Tools: Sync Button, Currency, Menu */}
           <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* Google Drive Sync Pill */}
+            {/* Google Drive Sync Status Pill */}
             {isDriveLinked ? (
               <button
                 type="button"
@@ -139,47 +145,47 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title={
                   syncStatus === 'error'
                     ? 'Sync notice - click to see details'
-                    : 'Google Drive Linked - Tap to sync now'
+                    : 'Google Drive Vault Linked - Tap to sync now'
                 }
-                className={`mc-button text-[11px] sm:text-xs px-2.5 py-1.5 flex items-center gap-1.5 ${
+                className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 transition cursor-pointer font-serif ${
                   syncStatus === 'error'
-                    ? 'mc-button-redstone'
-                    : 'mc-button-diamond'
+                    ? 'bg-[#4a1c18] text-[#f7b7b2] border border-[#8a332a] hover:bg-[#5e231e]'
+                    : 'bg-[#1b3d28] text-[#c4ebd1] border border-[#2b6340] hover:bg-[#255236] shadow-[0_1px_4px_rgba(0,0,0,0.2)]'
                 }`}
               >
                 <RefreshCw
-                  className={`w-3.5 h-3.5 ${
+                  className={`w-3.5 h-3.5 text-[#c4ebd1] ${
                     isSyncing || syncStatus === 'syncing' ? 'animate-spin' : ''
                   }`}
                 />
                 <span className="hidden sm:inline">
                   {isSyncing || syncStatus === 'syncing'
-                    ? 'Syncing...'
+                    ? 'Inking...'
                     : syncStatus === 'error'
                     ? 'Sync Notice'
-                    : 'Drive Synced'}
+                    : 'Vault Synced'}
                 </span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                className="mc-button text-[11px] sm:text-xs px-2.5 py-1.5 flex items-center gap-1 text-[#4de1f4]"
-                title="Connect Google Drive to sync across devices"
+                className="text-xs px-2.5 sm:px-3 py-1.5 rounded-xl font-serif font-medium bg-[#3a2016] border border-[#593421] text-[#e0c48e] hover:text-[#ffffff] hover:border-[#c59b27] flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                title="Connect Google Drive to sync your ledger across devices"
               >
-                <Cloud className="w-3.5 h-3.5 text-[#4de1f4]" />
-                <span>Link Drive</span>
+                <Cloud className="w-3.5 h-3.5 text-[#c59b27]" />
+                <span>Link Vault</span>
               </button>
             )}
 
             {/* Offline indicator */}
             {isOffline && (
               <div
-                className="mc-badge bg-[#7a2a0d] text-[#ffaa00] px-2 py-1 text-[10px] border-2 border-black"
-                title="Offline - Saving locally"
+                className="bg-[#4d3211] text-[#fae1a0] border border-[#8c5e23] px-2 py-1 rounded-lg text-xs font-serif font-semibold flex items-center gap-1"
+                title="Offline - Logged to local desk storage"
               >
-                <WifiOff className="w-3.5 h-3.5 mr-1 text-[#ffaa00]" />
-                <span className="hidden lg:inline">Offline</span>
+                <WifiOff className="w-3 h-3 text-[#fae1a0]" />
+                <span className="hidden lg:inline">Desk Offline</span>
               </div>
             )}
 
@@ -192,11 +198,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="currency-select"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="mc-input text-xs font-bold py-1.5 px-2.5 border-2 border-black cursor-pointer text-[#ffd700]"
-                title="Change Currency Symbol"
+                className="font-serif text-xs font-bold py-1.5 px-2.5 bg-[#3a2016] border border-[#593421] rounded-xl cursor-pointer text-[#fbf5eb] hover:border-[#c59b27] focus:outline-none focus:ring-2 focus:ring-[#c59b27]/40 shadow-xs"
+                title="Change Ledger Currency"
               >
                 {currencyList.map((c) => (
-                  <option key={c.code} value={c.symbol} className="bg-[#25201b] text-white">
+                  <option key={c.code} value={c.symbol} className="bg-[#2c1810] text-[#fbf5eb]">
                     {c.symbol} ({c.code})
                   </option>
                 ))}
@@ -205,20 +211,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Desktop User profile & Logout */}
             {user && (
-              <div className="hidden md:flex items-center gap-2 pl-2 border-l-2 border-[#120e0a]">
+              <div className="hidden md:flex items-center gap-2 pl-2 border-l border-[#44281b]">
                 <span
-                  className="font-mc text-xs text-[#a0a0a0] max-w-[120px] truncate"
-                  title={user.email || 'User'}
+                  className="font-serif text-xs text-[#d6c2a8] max-w-[120px] truncate"
+                  title={user.email || 'Bookkeeper'}
                 >
-                  {user.displayName || user.email?.split('@')[0] || 'Player'}
+                  {user.displayName || user.email?.split('@')[0] || 'Bookkeeper'}
                 </span>
                 <button
                   id="btn-logout-desktop"
                   onClick={() => logout()}
-                  className="mc-button mc-button-redstone p-1.5 transition text-xs font-bold cursor-pointer"
-                  title="Sign out"
+                  className="p-1.5 rounded-lg text-[#d6c2a8] hover:text-[#f87171] hover:bg-[#3e1f18] transition cursor-pointer"
+                  title="Close ledger / Sign out"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-4 h-4" />
                 </button>
               </div>
             )}
@@ -228,21 +234,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="btn-mobile-menu-toggle"
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden mc-button p-2 flex items-center gap-1.5 text-xs font-bold"
-              aria-label="Open mobile menu"
+              className="md:hidden p-2 rounded-xl bg-[#3a2016] border border-[#593421] text-[#fbf5eb] hover:border-[#c59b27] flex items-center gap-1.5 text-xs font-serif"
+              aria-label="Open ledger menu"
             >
               {user?.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt="Avatar"
-                  className="w-5 h-5 border border-black object-cover"
+                  className="w-5 h-5 rounded-full object-cover border border-[#6b422a]"
                 />
               ) : (
-                <div className="w-5 h-5 bg-[#2e7d32] border border-black text-[#55ff55] flex items-center justify-center font-bold text-[10px]">
-                  {user?.displayName ? user.displayName[0].toUpperCase() : 'P'}
+                <div className="w-5 h-5 rounded-full bg-[#522e1b] border border-[#854b2d] text-[#fbf5eb] flex items-center justify-center font-serif font-bold text-[10px]">
+                  {user?.displayName ? user.displayName[0].toUpperCase() : 'B'}
                 </div>
               )}
-              <Menu className="w-4 h-4" />
+              <Menu className="w-4 h-4 text-[#e0c48e]" />
             </button>
           </div>
         </div>

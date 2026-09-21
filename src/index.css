@@ -2,272 +2,197 @@
 
 @layer base {
   :root {
-    --mc-dirt: #3d2817;
-    --mc-dark-dirt: #26180d;
-    --mc-cobble: #474747;
-    --mc-deepslate: #202024;
-    --mc-bedrock: #141416;
-    --mc-gui: #c6c6c6;
-    --mc-gui-dark: #2a2824;
-    --mc-emerald: #17dd62;
-    --mc-redstone: #ff3333;
-    --mc-gold: #ffaa00;
-    --mc-diamond: #4de1f4;
+    /* The Vintage Bookkeeper (Tactile & Nostalgic) Palette */
+    --parchment-canvas: #f7f3eb;
+    --parchment-sheet: #fcf9f2;
+    --parchment-warm: #f4ede1;
+    --parchment-shaded: #ece2d0;
+
+    /* Leather Bookbinding Tones */
+    --leather-dark: #2c1810;
+    --leather-spine: #3a2015;
+    --leather-saddle: #6b4028;
+    --leather-tan: #9e6d49;
+    --gold-foil: #c59b27;
+    --brass-accent: #b08d44;
+
+    /* Inks */
+    --ink-espresso: #24140a;
+    --ink-sepia: #594132;
+    --ink-faded: #8c7361;
+
+    /* Accounting Inks */
+    --red-ink: #a63428;
+    --red-ink-light: #fbf0ee;
+    --red-ink-border: #e8b6b0;
+
+    --green-ink: #265c3b;
+    --green-ink-light: #eff7f1;
+    --green-ink-border: #b9deb4;
+
+    /* Borders */
+    --border-ledger: #d8c7b0;
+    --border-subtle: #e6dac8;
   }
 
   body {
-    font-family: 'Pixelify Sans', 'Plus Jakarta Sans', system-ui, sans-serif;
-    background-color: #1a1612;
-    background-image: 
-      radial-gradient(circle at 50% 50%, rgba(30, 24, 18, 0.9) 0%, rgba(16, 12, 8, 0.98) 100%),
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 16px),
-      repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 16px);
-    background-size: auto, 16px 16px, 16px 16px;
-    image-rendering: pixelated;
+    font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--parchment-canvas);
+    color: var(--ink-espresso);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Headers, Titles, and Grand Totals use classic bookkeeper serif */
+  h1, h2, h3, h4, .font-serif, .book-title {
+    font-family: 'Playfair Display', 'Merriweather', 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+
+  /* Force all numbers, currencies, and dates to render with neat tabular alignment */
+  .tabular-nums,
+  input[type="number"],
+  input[type="date"],
+  input[type="month"] {
+    font-variant-numeric: tabular-nums lining-nums !important;
+    font-feature-settings: "tnum" 1, "lnum" 1 !important;
   }
 }
 
-/* Minecraft Pixel Font Utilities */
-.font-pixel {
-  font-family: 'Silkscreen', monospace;
-  letter-spacing: -0.5px;
+/* Vintage Bookkeeper Folio Card (Tactile Paper on Leather) */
+.vintage-card {
+  background-color: #fcf9f2;
+  border: 1px solid #d8c7b0;
+  box-shadow: 0 4px 18px -2px rgba(44, 24, 16, 0.08), 0 1px 4px rgba(44, 24, 16, 0.05);
+  border-radius: 0.875rem;
+  color: #24140a;
+  position: relative;
 }
 
-.font-mc {
-  font-family: 'Pixelify Sans', sans-serif;
+/* Tactile Parchment Inset Panel */
+.vintage-inset {
+  background-color: #f4ede1;
+  border: 1px solid #dfd1bd;
+  border-radius: 0.75rem;
 }
 
-/* Minecraft Blocky 3D Bevel UI Styles */
-.mc-panel {
-  background-color: #2b2620;
-  border: 3px solid #100c08;
-  box-shadow: 
-    inset 3px 3px 0px #4d443a,
-    inset -3px -3px 0px #1a1612,
-    0 4px 8px rgba(0,0,0,0.5);
-  border-radius: 0px !important;
-}
-
-.mc-panel-stone {
-  background-color: #383838;
-  border: 3px solid #141414;
-  box-shadow: 
-    inset 3px 3px 0px #5c5c5c,
-    inset -3px -3px 0px #222222,
-    0 4px 10px rgba(0,0,0,0.6);
-  border-radius: 0px !important;
-}
-
-.mc-panel-light {
-  background-color: #c6c6c6;
-  border: 3px solid #000;
-  box-shadow: 
-    inset 3px 3px 0px #ffffff,
-    inset -3px -3px 0px #555555,
-    0 4px 8px rgba(0,0,0,0.4);
-  color: #1a1a1a;
-  border-radius: 0px !important;
-}
-
-/* Iconic Minecraft Classic Buttons */
-.mc-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #585858;
-  border: 2px solid #000;
-  box-shadow: 
-    inset 2px 2px 0px #8b8b8b,
-    inset -2px -2px 0px #303030,
-    0 2px 0 #000;
-  color: #e0e0e0;
-  text-shadow: 2px 2px 0px #1b1b1b;
-  font-family: 'Pixelify Sans', sans-serif;
-  font-weight: 700;
-  transition: none;
-  cursor: pointer;
-  border-radius: 0px !important;
-  user-select: none;
-}
-
-.mc-button:hover:not(:disabled) {
-  background-color: #6e6e6e;
-  box-shadow: 
-    inset 2px 2px 0px #a2a2a2,
-    inset -2px -2px 0px #3c3c3c,
-    0 2px 0 #000;
-  color: #ffffff;
-}
-
-.mc-button:active:not(:disabled) {
-  background-color: #404040;
-  box-shadow: 
-    inset 2px 2px 0px #222222,
-    inset -2px -2px 0px #707070;
-  transform: translateY(2px);
-}
-
-.mc-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  filter: grayscale(0.5);
-}
-
-/* Emerald Green Button (Add, Save, Confirm) */
-.mc-button-emerald {
-  background-color: #2e7d32;
-  border: 2px solid #0d3810;
-  box-shadow: 
-    inset 2px 2px 0px #57b85d,
-    inset -2px -2px 0px #1b4d1e,
-    0 2px 0 #000;
-  color: #ffffff;
-  text-shadow: 2px 2px 0px #0b2b0e;
-}
-.mc-button-emerald:hover:not(:disabled) {
-  background-color: #388e3c;
-  box-shadow: 
-    inset 2px 2px 0px #72d679,
-    inset -2px -2px 0px #255d29,
-    0 2px 0 #000;
-}
-.mc-button-emerald:active:not(:disabled) {
-  background-color: #1b5e20;
-  box-shadow: 
-    inset 2px 2px 0px #0d3310,
-    inset -2px -2px 0px #4caf50;
-  transform: translateY(2px);
-}
-
-/* Redstone Red Button (Cancel, Delete, Negative) */
-.mc-button-redstone {
-  background-color: #991b1b;
-  border: 2px solid #450a0a;
-  box-shadow: 
-    inset 2px 2px 0px #ef4444,
-    inset -2px -2px 0px #5f1010,
-    0 2px 0 #000;
-  color: #ffffff;
-  text-shadow: 2px 2px 0px #300505;
-}
-.mc-button-redstone:hover:not(:disabled) {
-  background-color: #b91c1c;
-  box-shadow: 
-    inset 2px 2px 0px #f87171,
-    inset -2px -2px 0px #781313,
-    0 2px 0 #000;
-}
-.mc-button-redstone:active:not(:disabled) {
-  background-color: #7f1d1d;
-  box-shadow: 
-    inset 2px 2px 0px #3b0707,
-    inset -2px -2px 0px #dc2626;
-  transform: translateY(2px);
-}
-
-/* Diamond Blue Button (Sync, Info, Vault) */
-.mc-button-diamond {
-  background-color: #0e7490;
-  border: 2px solid #083344;
-  box-shadow: 
-    inset 2px 2px 0px #38bdf8,
-    inset -2px -2px 0px #155e75,
-    0 2px 0 #000;
-  color: #ffffff;
-  text-shadow: 2px 2px 0px #04202c;
-}
-.mc-button-diamond:hover:not(:disabled) {
-  background-color: #0284c7;
-  box-shadow: 
-    inset 2px 2px 0px #67e8f9,
-    inset -2px -2px 0px #075985,
-    0 2px 0 #000;
-}
-
-/* Minecraft Inset Slot & Input */
-.mc-slot {
-  background-color: #171411;
-  border: 2px solid #000;
-  box-shadow: 
-    inset 2px 2px 0px #0a0806,
-    inset -2px -2px 0px #3b332b;
-  border-radius: 0px !important;
-}
-
+/* Vintage Paper Inputs */
+.vintage-input,
 .mc-input {
-  background-color: #14110e;
-  border: 2px solid #000;
-  box-shadow: 
-    inset 2px 2px 0px #000000,
-    inset -2px -2px 0px #3d352c;
-  color: #ffffff;
-  font-family: 'Pixelify Sans', sans-serif;
-  border-radius: 0px !important;
-  outline: none;
+  background-color: #ffffff !important;
+  border: 1px solid #cfbeaa !important;
+  color: #24140a !important;
+  font-family: 'Source Sans 3', sans-serif !important;
+  border-radius: 0.625rem !important;
+  outline: none !important;
+  transition: all 0.15s ease-in-out !important;
+  box-shadow: inset 0 1px 2px rgba(44, 24, 16, 0.04) !important;
 }
+
+.vintage-input:focus,
 .mc-input:focus {
-  border-color: #57b85d;
-  box-shadow: 
-    inset 2px 2px 0px #000000,
-    inset -2px -2px 0px #2e7d32,
-    0 0 0 1px #57b85d;
+  border-color: #6b4028 !important;
+  box-shadow: 0 0 0 3px rgba(107, 64, 40, 0.12), inset 0 1px 2px rgba(44, 24, 16, 0.04) !important;
 }
 
-/* Minecraft Hotbar for Navigation */
-.mc-hotbar {
-  background-color: #2b251e;
-  border: 3px solid #110e0b;
-  box-shadow: 
-    inset 3px 3px 0px #4d4236,
-    inset -3px -3px 0px #181410,
-    0 4px 12px rgba(0,0,0,0.6);
-  border-radius: 0px !important;
+/* Vintage Buttons - Warm Leather, Embossed Brass, and Paper */
+.btn-leather {
+  background-color: #2c1810;
+  color: #fbf5eb;
+  border: 1px solid #1f100a;
+  box-shadow: 0 2px 6px rgba(44, 24, 16, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease-in-out;
+}
+.btn-leather:hover:not(:disabled) {
+  background-color: #3e2217;
+  box-shadow: 0 4px 12px rgba(44, 24, 16, 0.35);
+  transform: translateY(-1px);
+}
+.btn-leather:active:not(:disabled) {
+  transform: translateY(0);
+  background-color: #21110a;
 }
 
-.mc-hotbar-slot {
-  background-color: #181410;
-  border: 2px solid #000;
-  box-shadow: 
-    inset 2px 2px 0px #080604,
-    inset -2px -2px 0px #382e25;
-  transition: none;
-  border-radius: 0px !important;
+/* Red Ink Button (Deductions, Expenses, Debits) */
+.btn-red-ink {
+  background-color: #a63428;
+  color: #ffffff;
+  border: 1px solid #85261c;
+  box-shadow: 0 2px 6px rgba(166, 52, 40, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.15s ease-in-out;
+}
+.btn-red-ink:hover:not(:disabled) {
+  background-color: #932c21;
+  box-shadow: 0 4px 10px rgba(166, 52, 40, 0.35);
 }
 
-.mc-hotbar-slot.active {
-  background-color: #3b3228;
-  border: 2px solid #fff;
-  box-shadow: 
-    inset 2px 2px 0px #5c4f40,
-    inset -2px -2px 0px #181410,
-    0 0 8px rgba(255,255,255,0.4);
+/* Green Ink Button (Receipts, Incomes, Settlements) */
+.btn-green-ink {
+  background-color: #265c3b;
+  color: #ffffff;
+  border: 1px solid #1c472c;
+  box-shadow: 0 2px 6px rgba(38, 92, 59, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.15s ease-in-out;
+}
+.btn-green-ink:hover:not(:disabled) {
+  background-color: #1f4d30;
+  box-shadow: 0 4px 10px rgba(38, 92, 59, 0.35);
 }
 
-/* Minecraft Tooltip & Badge */
-.mc-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 2px solid #000;
-  font-family: 'Pixelify Sans', sans-serif;
-  font-weight: 700;
-  text-shadow: 1px 1px 0px rgba(0,0,0,0.8);
-  border-radius: 0px !important;
+/* Parchment Button */
+.btn-parchment {
+  background-color: #f7f1e6;
+  color: #3d281a;
+  border: 1px solid #cfbeaa;
+  box-shadow: 0 1px 3px rgba(44, 24, 16, 0.08);
+  transition: all 0.15s ease-in-out;
+}
+.btn-parchment:hover:not(:disabled) {
+  background-color: #efe5d5;
+  border-color: #bfaaa0;
+  color: #24140a;
 }
 
-/* Hide default scrollbars and pixelate */
+/* Vintage Accounting Ruled Lines Texture (Subtle ledger ruling) */
+.ledger-grid {
+  background-color: #f7f3eb;
+  background-size: 100% 28px;
+  background-image: linear-gradient(to bottom, rgba(200, 185, 165, 0.15) 1px, transparent 1px);
+}
+
+/* Red Margin Rule of physical accounting books */
+.accounting-margin {
+  position: relative;
+}
+.accounting-margin::before {
+  content: '';
+  position: absolute;
+  left: 60px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: rgba(166, 52, 40, 0.2);
+  pointer-events: none;
+}
+
+/* Double-underline for Accounting Grand Totals */
+.accounting-double-rule {
+  border-bottom: 3px double #24140a;
+  padding-bottom: 2px;
+}
+
+/* Bookbinder Leather Scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #14110e;
-  border-left: 2px solid #000;
+  background: #f0e7d9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #473e34;
-  border: 2px solid #000;
-  box-shadow: inset 1px 1px 0px #6e6052, inset -1px -1px 0px #241f1a;
+  background: #c7b59e;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #5c5044;
+  background: #9e8770;
 }

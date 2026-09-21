@@ -367,6 +367,24 @@ export async function deleteTransaction(userId: string, transactionId: string): 
 
 // ================= PEOPLE & DEBTS =================
 
+export function calculateBalanceFromEntries(entries: LedgerEntry[]): number {
+  return entries.reduce((acc, entry) => {
+    const numAmount = Math.abs(Number(entry.amount) || 0);
+    if (entry.type === 'give') {
+      return acc + numAmount;
+    } else if (entry.type === 'take') {
+      return acc - numAmount;
+    } else if (entry.type === 'settlement') {
+      if (entry.direction === 'to_take') {
+        return acc - numAmount;
+      } else {
+        return acc + numAmount;
+      }
+    }
+    return acc;
+  }, 0);
+}
+
 export function subscribePeople(
   userId: string,
   callback: (people: Person[], fromCache: boolean) => void,
@@ -390,6 +408,33 @@ export function subscribePeople(
     if (deletedIds.size > 0) {
       list = list.filter((p) => !deletedIds.has(p.id));
     }
+
+    // Mathematically synchronize every person's balance from their recorded entries
+    let peopleChanged = false;
+    list = list.map((p) => {
+      const eKey = getEntriesKey(userId, p.id);
+      const eStored = localStorage.getItem(eKey);
+      if (eStored) {
+        try {
+          const entries: LedgerEntry[] = JSON.parse(eStored);
+          if (entries && entries.length > 0) {
+            const calculated = calculateBalanceFromEntries(entries);
+            if (Math.abs((p.balance || 0) - calculated) > 0.001) {
+              peopleChanged = true;
+              return { ...p, balance: calculated };
+            }
+          }
+        } catch {
+          // ignore parsing error
+        }
+      }
+      return p;
+    });
+
+    if (peopleChanged) {
+      localStorage.setItem(key, JSON.stringify(list));
+    }
+
     list.sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
     callback(list, true);
   };
@@ -573,37 +618,7 @@ export async function addLedgerEntry(
   const now = Date.now();
   const numAmount = Math.abs(Number(entry.amount));
 
-  let balanceDelta = 0;
-  if (entry.type === 'give') {
-    balanceDelta = numAmount;
-  } else if (entry.type === 'take') {
-    balanceDelta = -numAmount;
-  } else if (entry.type === 'settlement') {
-    if (entry.direction === 'to_take') {
-      balanceDelta = -numAmount;
-    } else {
-      balanceDelta = numAmount;
-    }
-  }
-
-  // Update Person balance
-  const peopleKey = getPeopleKey(userId);
-  const storedPeople = localStorage.getItem(peopleKey);
-  const people: Person[] = storedPeople
-    ? JSON.parse(storedPeople)
-    : userId.startsWith('demo-')
-      ? getInitialDemoPeople()
-      : [];
-  const personIndex = people.findIndex((p) => p.id === personId);
-  let updatedBalance = 0;
-  if (personIndex !== -1) {
-    updatedBalance = (people[personIndex].balance || 0) + balanceDelta;
-    people[personIndex].balance = updatedBalance;
-    people[personIndex].updatedAt = now;
-    localStorage.setItem(peopleKey, JSON.stringify(people));
-  }
-
-  // Add entry
+  // 1. Add entry first
   const entriesKey = getEntriesKey(userId, personId);
   const storedEntries = localStorage.getItem(entriesKey);
   const entries: LedgerEntry[] = storedEntries
@@ -625,6 +640,24 @@ export async function addLedgerEntry(
   });
   localStorage.setItem(entriesKey, JSON.stringify(entries));
 
+  // 2. Compute exact balance from all entries
+  const updatedBalance = calculateBalanceFromEntries(entries);
+
+  // 3. Update Person balance in storage
+  const peopleKey = getPeopleKey(userId);
+  const storedPeople = localStorage.getItem(peopleKey);
+  const people: Person[] = storedPeople
+    ? JSON.parse(storedPeople)
+    : userId.startsWith('demo-')
+      ? getInitialDemoPeople()
+      : [];
+  const personIndex = people.findIndex((p) => p.id === personId);
+  if (personIndex !== -1) {
+    people[personIndex].balance = updatedBalance;
+    people[personIndex].updatedAt = now;
+    localStorage.setItem(peopleKey, JSON.stringify(people));
+  }
+
   let personRemoved = false;
   if (removeIfZero && Math.abs(updatedBalance) < 0.01) {
     await deletePerson(userId, personId);
@@ -640,41 +673,29 @@ export async function deleteLedgerEntry(
   userId: string,
   personId: string,
   entryId: string,
-  entry: {
+  _entry?: {
     amount: number;
     type: LedgerEntryType;
     direction: 'to_give' | 'to_take';
   }
 ): Promise<void> {
-  const numAmount = Math.abs(Number(entry.amount));
-  let balanceDelta = 0;
-  if (entry.type === 'give') {
-    balanceDelta = -numAmount;
-  } else if (entry.type === 'take') {
-    balanceDelta = numAmount;
-  } else if (entry.type === 'settlement') {
-    if (entry.direction === 'to_take') {
-      balanceDelta = numAmount;
-    } else {
-      balanceDelta = -numAmount;
-    }
-  }
+  const entriesKey = getEntriesKey(userId, personId);
+  const storedEntries = localStorage.getItem(entriesKey);
+  const entries: LedgerEntry[] = storedEntries ? JSON.parse(storedEntries) : [];
+  const filtered = entries.filter((e) => e.id !== entryId);
+  localStorage.setItem(entriesKey, JSON.stringify(filtered));
+
+  const updatedBalance = calculateBalanceFromEntries(filtered);
 
   const peopleKey = getPeopleKey(userId);
   const storedPeople = localStorage.getItem(peopleKey);
   const people: Person[] = storedPeople ? JSON.parse(storedPeople) : [];
   const personIndex = people.findIndex((p) => p.id === personId);
   if (personIndex !== -1) {
-    people[personIndex].balance = (people[personIndex].balance || 0) + balanceDelta;
+    people[personIndex].balance = updatedBalance;
     people[personIndex].updatedAt = Date.now();
     localStorage.setItem(peopleKey, JSON.stringify(people));
   }
-
-  const entriesKey = getEntriesKey(userId, personId);
-  const storedEntries = localStorage.getItem(entriesKey);
-  const entries: LedgerEntry[] = storedEntries ? JSON.parse(storedEntries) : [];
-  const filtered = entries.filter((e) => e.id !== entryId);
-  localStorage.setItem(entriesKey, JSON.stringify(filtered));
 
   recordDeletedEntryId(userId, entryId);
   notifyDataChange(true);

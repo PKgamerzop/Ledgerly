@@ -6,7 +6,6 @@ import { SpendingTransaction, TransactionType } from '../types';
 import { getTodayDateString, formatCurrency, formatDateDisplay } from '../utils/formatters';
 import {
   Calendar,
-  DollarSign,
   Tag,
   CheckCircle2,
   AlertCircle,
@@ -14,7 +13,8 @@ import {
   ArrowRight,
   TrendingDown,
   TrendingUp,
-  ArrowDownLeft,
+  BookOpen,
+  PenTool,
 } from 'lucide-react';
 
 interface AddSpendingViewProps {
@@ -50,7 +50,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
   const { user } = useAuth();
   const { currency } = useCurrency();
 
-  // Transaction type: 'spent' (default) or 'received' (subtracted during totaling)
+  // Transaction type: 'spent' (default) or 'received'
   const [type, setType] = useState<TransactionType>('spent');
   const [date, setDate] = useState<string>(getTodayDateString());
   const [amount, setAmount] = useState<string>('');
@@ -61,7 +61,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
-  // Compute today's totals: received amount is subtracted from spent
+  // Compute today's totals
   const todayStr = getTodayDateString();
   const todaySpent = recentTransactions
     .filter((t) => t.date === todayStr && t.type !== 'received')
@@ -100,18 +100,18 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
     if (!reason.trim()) {
       setErrorMessage(
         type === 'spent'
-          ? 'Please provide a reason or note for this spending.'
-          : 'Please provide a source or note for this received amount.'
+          ? 'Please enter an account note or description for this debit.'
+          : 'Please enter a source or description for this credit.'
       );
       return;
     }
 
-    // Validation 3: Illogical future date check (> 30 days in future)
+    // Validation 3: Date check
     const selectedDate = new Date(date);
     const maxFuture = new Date();
     maxFuture.setDate(maxFuture.getDate() + 30);
     if (selectedDate > maxFuture) {
-      setErrorMessage('The transaction date cannot be more than 30 days in the future.');
+      setErrorMessage('The entry date cannot be more than 30 days in the future.');
       return;
     }
 
@@ -130,17 +130,16 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
       setReason('');
       setSuccessNotice(
         type === 'received'
-          ? `Recorded +${formatCurrency(parsedAmount, currency)} received for "${reason.trim()}" (subtracted from total)`
-          : `Recorded ${formatCurrency(parsedAmount, currency)} spent for "${reason.trim()}"`
+          ? `Entered to Ledger: +${formatCurrency(parsedAmount, currency)} credit recorded in green ink.`
+          : `Entered to Ledger: -${formatCurrency(parsedAmount, currency)} debit recorded in red ink.`
       );
 
-      // Reset success notice after 4 seconds
       setTimeout(() => {
         setSuccessNotice(null);
       }, 4000);
     } catch (err: unknown) {
       console.error('Error adding transaction:', err);
-      setErrorMessage('Failed to save transaction. Please check your connection.');
+      setErrorMessage('Could not record entry. Please verify your connection.');
     } finally {
       setSubmitting(false);
     }
@@ -150,92 +149,86 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 py-6 sm:py-10">
-      {/* View Header */}
+      {/* View Header (The Vintage Bookkeeper Style) */}
       <div className="text-center mb-6">
-        <div className="mc-badge bg-[#1b3d1b] border-2 border-black text-[#55ff55] px-3 py-1 text-xs mb-2">
-          {type === 'spent' ? (
-            <TrendingDown className="w-3.5 h-3.5 mr-1 text-[#ff5555]" />
-          ) : (
-            <TrendingUp className="w-3.5 h-3.5 mr-1 text-[#55ff55]" />
-          )}
-          <span>Quick Tracker</span>
+        <div className="inline-flex items-center gap-2 bg-[#f4ede1] border border-[#d8c7b0] text-[#6b4028] px-3.5 py-1 rounded-full text-xs font-serif mb-2.5 shadow-xs">
+          <BookOpen className="w-3.5 h-3.5 text-[#85261c]" />
+          <span className="font-semibold tracking-wide">Journal Voucher &bull; Daybook Register</span>
         </div>
-        <h2 className="font-pixel text-2xl sm:text-3xl text-[#ffffff] tracking-wide drop-shadow-[2px_2px_0_#000]">
-          {type === 'spent' ? 'Record New Spending' : 'Record Received Amount'}
+        <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#24140a] tracking-tight">
+          {type === 'spent' ? 'Record Debit Entry' : 'Record Credit Entry'}
         </h2>
-        <p className="font-mc text-xs sm:text-sm text-[#a0a0a0] mt-1">
+        <p className="text-xs text-[#6e5340] mt-1 font-serif italic">
           {type === 'spent'
-            ? "Log expenses instantly. Added to your total spend."
-            : 'Log income, refunds, or cashback. Subtracted from total spend.'}
+            ? 'Classic red ink deduction entered into your accounting ledger.'
+            : 'Archival green ink credit entered into your cash receipts account.'}
         </p>
       </div>
 
-      {/* Main Minecraft GUI Box */}
-      <div className="mc-panel p-6 sm:p-8">
+      {/* Main Parchment Docket Card */}
+      <div className="vintage-card p-5 sm:p-7 relative overflow-hidden">
+        {/* Vintage leather trim border */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#85261c] via-[#c59b27] to-[#265c3b]"></div>
+
         {errorMessage && (
-          <div className="mb-5 flex items-start gap-2.5 p-3 mc-panel bg-[#4a1414] border-2 border-[#1a0505] text-[#ff6b6b] text-xs leading-relaxed">
-            <AlertCircle className="w-4 h-4 text-[#ff4444] shrink-0 mt-0.5" />
-            <span className="font-mc">{errorMessage}</span>
+          <div className="mb-5 flex items-start gap-2.5 p-3.5 bg-[#fbf0ee] border border-[#e8b6b0] text-[#a63428] text-xs rounded-xl font-medium leading-relaxed">
+            <AlertCircle className="w-4 h-4 text-[#a63428] shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
           </div>
         )}
 
         {successNotice && (
-          <div className="mb-5 flex items-center gap-2 p-3 mc-panel bg-[#143d1a] border-2 border-[#091f0d] text-[#72ff72] text-xs font-bold">
-            <CheckCircle2 className="w-4 h-4 text-[#55ff55] shrink-0" />
-            <span className="font-mc">{successNotice}</span>
+          <div className="mb-5 flex items-center gap-2 p-3.5 bg-[#eff7f1] border border-[#b9deb4] text-[#265c3b] text-xs font-serif font-semibold rounded-xl shadow-xs">
+            <CheckCircle2 className="w-4 h-4 text-[#265c3b] shrink-0" />
+            <span>{successNotice}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Transaction Type Toggle: Spent (Default) vs Received */}
+          {/* Transaction Type Toggle: Spent (Debit - Red Ink) vs Received (Credit - Green Ink) */}
           <div>
-            <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
-              Transaction Mode
+            <label className="block font-serif text-xs font-bold text-[#594132] uppercase tracking-wider mb-2">
+              Folio Column / Transaction Mode
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 id="btn-mode-spent"
                 type="button"
                 onClick={() => handleTypeChange('spent')}
-                className={`py-3 px-3 flex items-center justify-center gap-2 cursor-pointer font-pixel text-xs transition ${
+                className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer font-serif text-xs transition border ${
                   type === 'spent'
-                    ? 'mc-button mc-button-redstone text-[#ffffff]'
-                    : 'mc-button text-[#aaaaaa]'
+                    ? 'bg-[#fbf0ee] text-[#a63428] border-[#e8b6b0] font-bold shadow-xs'
+                    : 'bg-[#ffffff] text-[#6e5340] border-[#d8c7b0] hover:border-[#bfaaa0]'
                 }`}
               >
-                <TrendingDown className={`w-4 h-4 ${type === 'spent' ? 'text-[#ffffff]' : 'text-[#ff5555]'}`} />
-                <span>Spent (Default)</span>
+                <TrendingDown className={`w-4 h-4 ${type === 'spent' ? 'text-[#a63428]' : 'text-[#8c7361]'}`} />
+                <span>Debit (Red Ink Expense)</span>
               </button>
 
               <button
                 id="btn-mode-received"
                 type="button"
                 onClick={() => handleTypeChange('received')}
-                className={`py-3 px-3 flex items-center justify-center gap-2 cursor-pointer font-pixel text-xs transition ${
+                className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer font-serif text-xs transition border ${
                   type === 'received'
-                    ? 'mc-button mc-button-emerald text-[#ffffff]'
-                    : 'mc-button text-[#aaaaaa]'
+                    ? 'bg-[#eff7f1] text-[#265c3b] border-[#b9deb4] font-bold shadow-xs'
+                    : 'bg-[#ffffff] text-[#6e5340] border-[#d8c7b0] hover:border-[#bfaaa0]'
                 }`}
               >
-                <TrendingUp className={`w-4 h-4 ${type === 'received' ? 'text-[#ffffff]' : 'text-[#55ff55]'}`} />
-                <span>Received (- Subtract)</span>
+                <TrendingUp className={`w-4 h-4 ${type === 'received' ? 'text-[#265c3b]' : 'text-[#8c7361]'}`} />
+                <span>Credit (Green Ink Receipt)</span>
               </button>
             </div>
-            <p className="font-mc text-[11px] text-[#888888] mt-1.5">
-              {type === 'spent'
-                ? 'Spent amounts add to your total spending.'
-                : 'Received amounts are treated as negative values and subtracted when totaling.'}
-            </p>
           </div>
 
           {/* Amount Input */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="spending-amount-input" className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
-                {type === 'spent' ? 'Amount Spent' : 'Amount Received'} ({currency}) *
+              <label htmlFor="spending-amount-input" className="block font-serif text-xs font-bold text-[#594132] uppercase tracking-wider">
+                {type === 'spent' ? 'Debit Amount' : 'Credit Amount'} ({currency}) *
               </label>
-              {/* Quick amount adders for mobile */}
-              <div className="flex items-center gap-1.5">
+              {/* Quick amount adders (Parchment buttons) */}
+              <div className="flex items-center gap-1.5 font-serif">
                 {[10, 50, 100, 500].map((inc) => (
                   <button
                     key={inc}
@@ -244,7 +237,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                       const cur = parseFloat(amount) || 0;
                       setAmount((cur + inc).toFixed(cur % 1 === 0 ? 0 : 2));
                     }}
-                    className="mc-button text-[10px] px-1.5 py-0.5"
+                    className="bg-[#f4ede1] hover:bg-[#ede3d1] text-[#4a2c1d] border border-[#d8c7b0] rounded-lg text-xs font-semibold px-2 py-0.5 transition cursor-pointer shadow-2xs"
                   >
                     +{inc}
                   </button>
@@ -252,7 +245,7 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
               </div>
             </div>
             <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ffd700] font-pixel text-lg pointer-events-none select-none">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 font-serif text-[#8c7361] font-bold text-2xl pointer-events-none select-none">
                 {currency}
               </div>
               <input
@@ -264,18 +257,22 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="mc-input w-full pl-12 pr-4 py-3 text-2xl font-bold text-[#ffffff] placeholder:text-[#555555]"
+                className={`w-full pl-12 pr-4 py-3 font-serif text-3xl sm:text-4xl font-bold bg-[#ffffff] border rounded-xl outline-none transition placeholder:text-[#c7b7a3] shadow-inner tabular-nums ${
+                  type === 'spent'
+                    ? 'text-[#a63428] border-[#d8c7b0] focus:border-[#a63428] focus:ring-2 focus:ring-[#a63428]/15'
+                    : 'text-[#265c3b] border-[#d8c7b0] focus:border-[#265c3b] focus:ring-2 focus:ring-[#265c3b]/15'
+                }`}
               />
             </div>
           </div>
 
-          {/* Reason Input */}
+          {/* Reason / Account Note */}
           <div>
-            <label htmlFor="spending-reason-input" className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
-              {type === 'spent' ? 'Reason / Description *' : 'Source / Description *'}
+            <label htmlFor="spending-reason-input" className="block font-serif text-xs font-bold text-[#594132] uppercase tracking-wider mb-2">
+              {type === 'spent' ? 'Description / Account Debit *' : 'Source / Remitter Note *'}
             </label>
             <div className="relative">
-              <Tag className="w-4 h-4 text-[#888888] absolute left-3.5 top-3.5" />
+              <Tag className="w-4 h-4 text-[#8c7361] absolute left-3.5 top-3.5" />
               <input
                 id="spending-reason-input"
                 type="text"
@@ -284,10 +281,10 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder={
                   type === 'spent'
-                    ? 'e.g. Bread, Golden Apples, Iron Ingot, Lunch'
-                    : 'e.g. Salary, Freelance project, Cashback, Refund, Gift'
+                    ? 'e.g. Printing supplies, Luncheon, Railway ticket, Office utilities'
+                    : 'e.g. Monthly stipend, Client retainer, Dividend, Settle cash'
                 }
-                className="mc-input w-full pl-10 pr-4 py-2.5 text-sm text-[#ffffff] placeholder:text-[#666666]"
+                className="w-full pl-10 pr-4 py-2.5 text-sm text-[#24140a] bg-[#ffffff] border border-[#cfbeaa] rounded-xl focus:border-[#6b4028] focus:ring-2 focus:ring-[#6b4028]/15 outline-none transition placeholder:text-[#a89584] shadow-xs"
               />
             </div>
           </div>
@@ -295,15 +292,17 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
           {/* Date Picker with Quick Date Pills */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="spending-date-input" className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
-                Date *
+              <label htmlFor="spending-date-input" className="block font-serif text-xs font-bold text-[#594132] uppercase tracking-wider">
+                Journal Entry Date *
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 font-serif">
                 <button
                   type="button"
                   onClick={() => setDate(getTodayDateString())}
-                  className={`mc-button text-[10px] px-2 py-0.5 ${
-                    date === getTodayDateString() ? 'mc-button-emerald' : ''
+                  className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold transition cursor-pointer border ${
+                    date === getTodayDateString()
+                      ? 'bg-[#2c1810] text-[#fbf5eb] border-[#2c1810]'
+                      : 'bg-[#f4ede1] text-[#6b4028] border-[#d8c7b0] hover:bg-[#ede3d1]'
                   }`}
                 >
                   Today
@@ -314,10 +313,10 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                     const y = new Date(Date.now() - 86400000);
                     setDate(y.toISOString().split('T')[0]);
                   }}
-                  className={`mc-button text-[10px] px-2 py-0.5 ${
+                  className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold transition cursor-pointer border ${
                     date === new Date(Date.now() - 86400000).toISOString().split('T')[0]
-                      ? 'mc-button-emerald'
-                      : ''
+                      ? 'bg-[#2c1810] text-[#fbf5eb] border-[#2c1810]'
+                      : 'bg-[#f4ede1] text-[#6b4028] border-[#d8c7b0] hover:bg-[#ede3d1]'
                   }`}
                 >
                   Yesterday
@@ -325,22 +324,22 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
               </div>
             </div>
             <div className="relative">
-              <Calendar className="w-4 h-4 text-[#888888] absolute left-3.5 top-3.5" />
+              <Calendar className="w-4 h-4 text-[#8c7361] absolute left-3.5 top-3.5" />
               <input
                 id="spending-date-input"
                 type="date"
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="mc-input w-full pl-10 pr-4 py-2.5 text-sm text-[#ffffff]"
+                className="w-full pl-10 pr-4 py-2.5 text-sm text-[#24140a] bg-[#ffffff] border border-[#cfbeaa] rounded-xl focus:border-[#6b4028] focus:ring-2 focus:ring-[#6b4028]/15 outline-none transition shadow-xs"
               />
             </div>
           </div>
 
           {/* Category Quick Tags */}
           <div>
-            <label className="block font-pixel text-xs text-[#ffd700] uppercase tracking-wider mb-2">
-              Category
+            <label className="block font-serif text-xs font-bold text-[#594132] uppercase tracking-wider mb-2">
+              Accounting Ledger Category
             </label>
             <div className="flex flex-wrap gap-2">
               {currentCategories.map((cat) => (
@@ -348,8 +347,10 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
                   key={cat}
                   type="button"
                   onClick={() => setCategory(cat)}
-                  className={`mc-button px-2.5 py-1 text-xs cursor-pointer ${
-                    category === cat ? 'mc-button-emerald' : ''
+                  className={`px-3 py-1.5 rounded-xl font-serif text-xs transition cursor-pointer border ${
+                    category === cat
+                      ? 'bg-[#2c1810] text-[#fbf5eb] border-[#2c1810] font-bold shadow-xs'
+                      : 'bg-[#ffffff] text-[#594132] border-[#d8c7b0] hover:border-[#bfaaa0] hover:bg-[#faf4ea]'
                   }`}
                 >
                   {cat}
@@ -358,75 +359,75 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
             </div>
           </div>
 
-          {/* Prominent Save / Add Button */}
+          {/* Vintage Action Button */}
           <button
             id="btn-save-spending"
             type="submit"
             disabled={submitting}
-            className={`mc-button w-full mt-4 py-3.5 px-6 font-bold text-base cursor-pointer ${
-              type === 'received' ? 'mc-button-emerald' : 'mc-button-emerald'
+            className={`w-full mt-4 py-3.5 px-6 font-serif font-bold text-sm tracking-wide rounded-xl transition cursor-pointer flex items-center justify-center gap-2 ${
+              type === 'received' ? 'btn-green-ink' : 'btn-red-ink'
             }`}
           >
             {submitting ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                {type === 'received' ? (
-                  <TrendingUp className="w-5 h-5 mr-2 text-[#55ff55]" />
-                ) : (
-                  <CheckCircle2 className="w-5 h-5 mr-2 text-[#55ff55]" />
-                )}
-                <span>{type === 'received' ? 'Save Received Amount' : 'Save Spending'}</span>
+                <PenTool className="w-4 h-4 text-white" />
+                <span>
+                  {type === 'received'
+                    ? 'Ink Credit Entry to Ledger'
+                    : 'Ink Debit Entry to Ledger'}
+                </span>
               </>
             )}
           </button>
         </form>
       </div>
 
-      {/* Snapshot of Today's Spending & Recent Transactions */}
-      <div className="mt-8 mc-panel p-5">
-        <div className="flex items-center justify-between pb-3 border-b-2 border-[#15120e]">
+      {/* Snapshot of Today's Daybook & Recent Transactions */}
+      <div className="mt-8 vintage-card p-5 sm:p-6">
+        <div className="flex items-center justify-between pb-3.5 border-b border-[#dfd1bd]">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#ffaa00]" />
-            <span className="font-pixel text-xs text-[#ffd700] uppercase tracking-wider">
-              Today's Net Spend
+            <Clock className="w-4 h-4 text-[#85261c]" />
+            <span className="font-serif text-xs font-bold text-[#4a2c1d] uppercase tracking-wider">
+              Today&apos;s Daybook Balance
             </span>
           </div>
           <div className="text-right">
-            <span className={`font-pixel text-base ${todayNetTotal < 0 ? 'text-[#55ff55]' : 'text-[#ffd700]'}`}>
+            <span className={`font-serif text-xl sm:text-2xl font-bold tabular-nums ${todayNetTotal < 0 ? 'text-[#265c3b]' : 'text-[#a63428]'}`}>
               {formatCurrency(todayNetTotal, currency)}
             </span>
             {(todaySpent > 0 && todayReceived > 0) && (
-              <div className="font-mc text-[10px] text-[#888888] mt-0.5">
-                Spent: {formatCurrency(todaySpent, currency)} | Recv: -{formatCurrency(todayReceived, currency)}
+              <div className="font-serif text-[11px] text-[#7d6350] mt-0.5">
+                Debits: {formatCurrency(todaySpent, currency)} | Credits: -{formatCurrency(todayReceived, currency)}
               </div>
             )}
           </div>
         </div>
 
-        <div className="mt-3 divide-y-2 divide-[#15120e]">
+        <div className="mt-3 divide-y divide-[#ebdcc8]">
           {recentTransactions.slice(0, 4).map((t) => {
             const isReceived = t.type === 'received';
             return (
-              <div key={t.id} className="py-2.5 flex items-center justify-between text-xs">
+              <div key={t.id} className="py-3 flex items-center justify-between text-xs">
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[#ffffff]">{t.reason}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-serif font-semibold text-[#24140a]">{t.reason}</span>
                     <span
-                      className={`font-pixel text-[9px] px-1 py-0.2 border ${
+                      className={`text-[10px] font-serif px-1.5 py-0.2 rounded font-bold border ${
                         isReceived
-                          ? 'bg-[#1b3d1b] text-[#55ff55] border-[#2e7d32]'
-                          : 'bg-[#3d1b1b] text-[#ff7777] border-[#8b2525]'
+                          ? 'bg-[#eff7f1] text-[#265c3b] border-[#b9deb4]'
+                          : 'bg-[#fbf0ee] text-[#a63428] border-[#e8b6b0]'
                       }`}
                     >
-                      {isReceived ? 'Received' : 'Spent'}
+                      {isReceived ? 'Credit' : 'Debit'}
                     </span>
                   </div>
-                  <span className="text-[#888888] text-[11px] font-mc">
-                    {formatDateDisplay(t.date)} • {t.category || 'General'}
+                  <span className="text-[#8c7361] text-[11px] mt-0.5 font-serif italic">
+                    {formatDateDisplay(t.date)} &bull; {t.category || 'General'}
                   </span>
                 </div>
-                <span className={`font-pixel text-sm ${isReceived ? 'text-[#55ff55]' : 'text-[#ff5555]'}`}>
+                <span className={`font-serif text-sm font-bold tabular-nums ${isReceived ? 'text-[#265c3b]' : 'text-[#a63428]'}`}>
                   {isReceived ? '+' : '-'}{formatCurrency(t.amount, currency)}
                 </span>
               </div>
@@ -434,8 +435,8 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
           })}
 
           {recentTransactions.length === 0 && (
-            <div className="py-4 text-center text-xs text-[#888888] font-mc">
-              No items in chest yet. Add your first above!
+            <div className="py-6 text-center text-xs text-[#8c7361] font-serif italic">
+              No journal entries recorded for today yet.
             </div>
           )}
         </div>
@@ -444,10 +445,10 @@ export const AddSpendingView: React.FC<AddSpendingViewProps> = ({
           <button
             id="btn-view-all-history"
             onClick={onViewHistory}
-            className="mc-button w-full mt-3 py-2 text-center text-xs font-bold text-[#55ffff] flex items-center justify-center gap-1 cursor-pointer"
+            className="w-full mt-3 py-2.5 text-center font-serif text-xs font-bold text-[#6b4028] hover:text-[#2c1810] bg-[#f4ede1] hover:bg-[#ede2ce] border border-[#d8c7b0] rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
           >
-            <span>View All Spending History</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>Inspect Complete General Ledger</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#6b4028]" />
           </button>
         )}
       </div>

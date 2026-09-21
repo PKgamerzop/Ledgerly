@@ -6,6 +6,7 @@ import {
   saveDeletedPersonIds,
   getDeletedEntryIds,
   saveDeletedEntryIds,
+  calculateBalanceFromEntries,
   DATA_CHANGE_EVENT,
   REMOTE_DATA_EVENT,
 } from '../db/storage';
@@ -126,12 +127,10 @@ export function importRemoteVault(payload: VaultPayload, userId: string) {
   const deletedPersonSet = new Set(getDeletedPersonIds(userId));
   const validPeople = (payload.people || []).filter((p) => !deletedPersonSet.has(p.id));
 
-  // Save transactions & people
-  localStorage.setItem(txKey, JSON.stringify(validTransactions));
-  localStorage.setItem(peopleKey, JSON.stringify(validPeople));
-
-  // Save ledger entries
+  // Save ledger entries first and calculate accurate balances
   const deletedEntrySet = new Set(getDeletedEntryIds(userId));
+  const personBalances: Record<string, number> = {};
+
   if (payload.ledgerEntries) {
     Object.entries(payload.ledgerEntries).forEach(([personId, entries]) => {
       if (deletedPersonSet.has(personId)) {
@@ -147,8 +146,37 @@ export function importRemoteVault(payload: VaultPayload, userId: string) {
         : `ledgerly_entries_${userId}_${personId}`;
       const validEntries = (entries || []).filter((e) => !deletedEntrySet.has(e.id));
       localStorage.setItem(entryKey, JSON.stringify(validEntries));
+      if (validEntries.length > 0) {
+        personBalances[personId] = calculateBalanceFromEntries(validEntries);
+      }
     });
   }
+
+  // Ensure validPeople balances are synchronized with their ledger entries
+  const synchronizedPeople = validPeople.map((p) => {
+    if (personBalances[p.id] !== undefined) {
+      return { ...p, balance: personBalances[p.id] };
+    }
+    const eKey = userId.startsWith('demo-')
+      ? `ledgerly_demo_entries_${p.id}`
+      : `ledgerly_entries_${userId}_${p.id}`;
+    const eStored = localStorage.getItem(eKey);
+    if (eStored) {
+      try {
+        const localEntries: LedgerEntry[] = JSON.parse(eStored);
+        if (localEntries && localEntries.length > 0) {
+          return { ...p, balance: calculateBalanceFromEntries(localEntries) };
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return p;
+  });
+
+  // Save transactions & synchronized people
+  localStorage.setItem(txKey, JSON.stringify(validTransactions));
+  localStorage.setItem(peopleKey, JSON.stringify(synchronizedPeople));
 
   // Record modification time
   if (payload.lastModified) {
@@ -257,6 +285,18 @@ function mergeVaults(local: VaultPayload, remote: VaultPayload, userId: string):
     );
   });
 
+  // Re-calculate the balance for EVERY person from the merged ledger entries
+  const finalizedPeople = mergedPeople.map((person) => {
+    const pEntries = mergedLedgerEntries[person.id];
+    if (pEntries && pEntries.length > 0) {
+      return {
+        ...person,
+        balance: calculateBalanceFromEntries(pEntries),
+      };
+    }
+    return person;
+  });
+
   const latestTime = Math.max(local.lastModified || 0, remote.lastModified || 0, Date.now());
 
   return {
@@ -264,7 +304,7 @@ function mergeVaults(local: VaultPayload, remote: VaultPayload, userId: string):
     lastModified: latestTime,
     userId,
     transactions: mergedTransactions,
-    people: mergedPeople,
+    people: finalizedPeople,
     ledgerEntries: mergedLedgerEntries,
     deletedTxIds: Array.from(allDeletedTxIds),
     deletedPersonIds: Array.from(allDeletedPersonIds),
