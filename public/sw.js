@@ -1,5 +1,5 @@
 // Ledgerly PWA Service Worker
-const CACHE_NAME = 'ledgerly-pwa-v1';
+const CACHE_NAME = 'ledgerly-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   '/logo.svg',
   '/logo.png',
   '/favicon.svg',
+  '/favicon-64.png',
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
